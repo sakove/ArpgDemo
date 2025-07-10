@@ -1,124 +1,93 @@
 # DragonBloodContract
 
-一个类似于死亡细胞和星界战士的2D动作平台游戏项目。
+一个基于Unity引擎开发的2D动作平台游戏，灵感来源于《死亡细胞》和《星界战士》。
 
-## 项目结构
+## 核心技术栈
+
+- **渲染**: Universal Render Pipeline (URP)
+- **UI**: UI Toolkit
+- **资源管理**: Addressables
+- **输入系统**: New Input System
+- **动画**: DOTween
+
+## 项目结构概览
+
+本项目的目录结构经过精心设计，旨在实现高内聚、低耦合的目标。
 
 ```
 Assets/
-  ├── Scripts/
-  │   ├── Player/           # 玩家相关脚本
-  │   ├── Enemies/          # 敌人相关脚本
-  │   ├── Managers/         # 游戏管理器脚本
-  │   ├── UI/               # UI相关脚本
-  │   └── Utils/            # 工具类脚本
-  ├── Scenes/
-  │   ├── Persistent/       # 持久化场景
-  │   └── Levels/           # 关卡场景
-  ├── Prefabs/              # 预制体
-  ├── UI/                   # UI Toolkit资源
-  │   ├── Icons/            # UI图标
-  │   ├── MainUI.uxml       # 主游戏UI
-  │   ├── PauseUI.uxml      # 暂停菜单UI
-  │   ├── GameOverUI.uxml   # 游戏结束UI
-  │   └── GameStyles.uss    # 共享样式表
-  ├── Art/                  # 美术资源
-  ├── Animations/           # 动画资源
-  └── Audio/                # 音频资源
+├── AddressableAssetsData/ # Addressables 系统配置文件
+├── Art/                   # 美术资源 (模型、贴图、特效等)
+├── Audio/                 # 音频资源 (音乐、音效)
+├── Game Data/             # ScriptableObject 游戏数据
+│   └── Events/            # 事件系统数据 (事件频道)
+├── Prefabs/               # 预制体 (玩家、敌人、场景道具)
+├── Scenes/                # 游戏场景
+│   ├── Persistent/        # 持久化场景
+│   └── Levels/            # 关卡场景
+├── Scripts/               # C# 脚本
+│   ├── Combat/            # 战斗系统 (连击、伤害计算)
+│   ├── Effects/           # 特效控制 (相机抖动、时间暂停)
+│   ├── Enemies/           # 敌人AI和行为
+│   ├── Events/            # 事件系统核心逻辑
+│   ├── Managers/          # 核心管理器
+│   ├── Player/            # 玩家控制和状态
+│   ├── Skills/            # 技能系统
+│   └── StateMachine/      # 状态机 (玩家、敌人)
+└── UI Toolkit/            # UI Toolkit 资源 (UXML, USS)
 ```
 
-## 核心脚本说明
+## 核心系统详解
 
-### 管理器脚本
+### 1. 事件系统 (`Scripts/Events`)
 
-- **GameManager**: 游戏主管理器，负责场景加载和游戏流程控制
-- **AddressablesManager**: 资源管理器，基于Addressables系统加载和管理资源
-- **UIToolkitManager**: UI管理器，基于UI Toolkit处理所有UI相关功能
-- **ObjectPooler**: 对象池管理器，用于优化游戏性能
+采用基于 `ScriptableObject` 的事件系统，实现各模块间的解耦通信。
 
-### 玩家脚本
+- **`ScriptableObject/`**: 定义事件频道 (Event Channel)，如 `IntEventSO`, `VoidEventSO`。
+- **`MonoBehaviour/`**: 提供事件监听器 (EventListener)，如 `IntEventListener`，可方便地在Inspector中绑定事件和响应。
+- **`Editor/`**: 提供自定义编辑器扩展，用于在Inspector中调试和查看事件的订阅情况。
 
-- **PlayerManager**: 玩家状态管理，处理生命值、能量等数据
-- **PlayerController**: 玩家控制器，处理输入和移动
+### 2. 状态机 (`Scripts/StateMachine`)
 
-### 敌人脚本
+一个通用的状态机实现，目前主要用于玩家 (`PlayerStateMachine`)。
 
-- **EnemyBase**: 敌人基类，提供基础AI行为
+- **`PlayerState.cs`**: 所有玩家状态的基类。
+- **`PlayerStateMachine.cs`**: 状态机核心，负责状态的切换和管理。
+- **`States/`**: 包含具体的状态实现，如 `PlayerIdleState`, `PlayerMovingState`, `PlayerAttackingState` 等。
 
-## 技术栈
+### 3. 技能系统 (`Scripts/Skills`)
 
-本项目使用以下Unity技术：
+一个可扩展的技能系统，允许通过 `ScriptableObject` 定义不同的技能。
 
-1. **UI Toolkit**: 用于构建现代化、响应式的用户界面
-   - 使用UXML定义UI结构
-   - 使用USS定义UI样式
-   - 支持事件系统和数据绑定
+- **`Skill.cs`**: 所有技能的基类，定义了技能的通用属性（如冷却时间、消耗）。
+- **`BasicAttackSkill.cs`**: 一个具体的攻击技能实现，展示了如何定义伤害、攻击范围和连击。
+- **`CombatController.cs`**: 负责处理技能的激活、连击逻辑和冷却计时。
 
-2. **Addressables**: 用于资源管理和异步加载
-   - 优化内存使用和加载时间
-   - 支持远程资源加载和更新
-   - 管理资源依赖关系
+### 4. 场景管理
 
-3. **新输入系统**: 用于处理玩家输入
-   - 支持多平台输入映射
-   - 可配置的输入动作和绑定
-   - 事件驱动的输入处理
+项目采用分离的场景加载策略，以提高性能和灵活性。
 
-## 场景结构
-
-本项目使用两种类型的场景:
-
-1. **持久化场景 (PersistentScene)**
-   - 包含不会被销毁的管理器对象
-   - 包含玩家角色
-   - 负责在关卡间保持状态
-
-2. **关卡场景 (Level1, Level2, ...)**
-   - 包含特定关卡的环境和敌人
-   - 可以独立设计和加载
-   - 通过Addressables异步加载
-
-## 使用说明
-
-1. 打开 `Assets/Scenes/Persistent/PersistentScene.unity` 作为主场景
-2. 在Unity编辑器中按Play运行游戏
-3. 游戏将自动加载第一个关卡
+- **`Persistent.unity`**: 持久化场景，包含`GameManager`、`InputManager`等在游戏运行期间不应被销毁的核心管理器。
+- **`Levels/`**: 包含所有可玩关卡。这些关卡由 `GameManager` 通过 `Addressables` 系统异步加载和卸载。
 
 ## 开发指南
 
-### 添加新敌人
+### 如何添加新技能
 
-1. 创建一个继承自 `EnemyBase` 的新脚本
-2. 重写必要的方法来自定义行为
-3. 将脚本附加到敌人预制体上
+1. 在 `Assets/Scripts/Skills` 目录下，创建一个新的脚本并继承自 `Skill.cs`。
+2. 重写 `Activate(GameObject user)` 方法来实现技能逻辑。
+3. 在Unity编辑器中，右键 `Create -> Skills -> [你的技能]` 来创建一个新的技能实例。
+4. 在 `PlayerController` 或 `CombatController` 中引用并使用这个新的技能资源。
 
-### 添加新关卡
+### 如何添加新状态
 
-1. 复制 `Assets/Scenes/Levels/Level1.unity` 并重命名
-2. 在新场景中设计关卡
-3. 确保场景中有一个带有 "PlayerSpawnPoint" 标签的游戏对象
-4. 将场景添加到Addressables系统中
-5. 在 `GameManager` 中添加关卡引用
+1. 在 `Assets/Scripts/StateMachine/States` 目录下，创建一个新的脚本并继承自 `PlayerState.cs`。
+2. 实现状态的 `Enter`, `Exit`, `LogicUpdate`, `PhysicsUpdate` 方法。
+3. 在 `PlayerStateMachine.cs` 中实例化并注册这个新状态。
+4. 在需要进行状态转换的地方，调用 `stateMachine.ChangeState()` 方法。
 
-### 添加新UI界面
+## 使用说明
 
-1. 创建新的UXML文件定义界面结构
-2. 使用GameStyles.uss中的样式类
-3. 在UIToolkitManager中添加加载和管理代码
-
-## 输入系统
-
-本项目使用Unity新输入系统，主要操作包括:
-
-- **WASD/方向键**: 移动
-- **空格键**: 跳跃
-- **鼠标左键/J键**: 攻击
-- **E键**: 互动
-- **Shift键**: 冲刺
-
-## 注意事项
-
-- 玩家脚本放在持久化场景中，确保在关卡间保持状态
-- 使用对象池来优化频繁创建/销毁的对象(如子弹、特效等)
-- 使用Addressables管理所有资源，避免直接引用
-- 所有UI元素应通过UIToolkitManager进行管理 
+1. 确保已在 `Package Manager` 中安装 `Input System`, `Addressables`, 和 `UI Toolkit` 包。
+2. 首次运行时，从 `Assets/Scenes/Persistent/Persistent.unity` 场景启动。
+3. 游戏将自动加载 `MainMenu` 或第一个关卡。 
