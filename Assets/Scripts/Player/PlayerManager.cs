@@ -29,7 +29,8 @@ public class PlayerManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
             
-            // Initialize stats
+
+             // Initialize stats
             currentHealth = maxHealth;
             currentEnergy = maxEnergy;
         }
@@ -63,7 +64,7 @@ public class PlayerManager : MonoBehaviour
     {
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
-    }
+    } 
     
     // Energy management
     public bool UseEnergy(int amount)
@@ -97,7 +98,7 @@ public class PlayerManager : MonoBehaviour
         
         // Additional death logic can be added here
         // e.g., play death animation, show game over screen, etc.
-    }
+    } 
     
     // Respawn logic
     public void Respawn(Vector3 position)

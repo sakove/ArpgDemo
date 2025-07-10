@@ -114,10 +114,20 @@ public abstract class EnemyBase : MonoBehaviour
         // Apply damage to player
         if (hitPlayer != null)
         {
-            PlayerManager player = hitPlayer.GetComponent<PlayerManager>();
-            if (player != null)
+            // 尝试获取PlayerHealth组件
+            PlayerHealth playerHealth = hitPlayer.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
             {
-                player.TakeDamage(damage);
+                playerHealth.TakeDamage(damage);
+            }
+            else
+            {
+                // 如果没有PlayerHealth组件，尝试获取PlayerManager组件
+                PlayerManager playerManager = hitPlayer.GetComponent<PlayerManager>();
+                if (playerManager != null)
+                {
+                    playerManager.TakeDamage(damage);
+                }
             }
         }
         
