@@ -27,7 +27,7 @@ public class ComboInputListener : InputEventListener
     
     private void Awake()
     {
-        base.Awake();
+        //base.Awake();
         _animator = GetComponentInParent<Animator>();
         _playerAttack = GetComponentInParent<PlayerAttack>();
         
@@ -39,10 +39,14 @@ public class ComboInputListener : InputEventListener
             _comboDamage = new float[] { 10f, 15f, 25f };
     }
     
-    protected override bool CanProcessEvent(string inputValue)
+    protected override bool CanProcessEvent(InputEventData data)
     {
         // 首先检查基础条件
-        if (!base.CanProcessEvent(inputValue))
+        if (!base.CanProcessEvent(data))
+            return false;
+            
+        // 只响应按下事件，而不是释放或持续事件
+        if (data.InputState != InputState.Pressed)
             return false;
             
         // 连招特定条件
@@ -57,14 +61,18 @@ public class ComboInputListener : InputEventListener
         return _inComboWindow;
     }
     
-    public override void OnEventRaised(string inputValue)
+    public override void OnEventRaised(InputEventData data)
     {
         // 如果条件不满足，则不响应事件
-        if (_useCondition && !CanProcessEvent(inputValue))
+        if (_useCondition && !CanProcessEvent(data))
             return;
         
-        // 执行攻击
-        PerformComboAttack();
+        // 只处理按下事件
+        if (data.InputState == InputState.Pressed)
+        {
+            // 执行攻击
+            PerformComboAttack();
+        }
         
         // 不调用基类方法，因为我们有自己的处理逻辑
     }

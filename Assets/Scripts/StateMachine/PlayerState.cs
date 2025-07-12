@@ -8,7 +8,7 @@ public abstract class PlayerState
     protected PlayerStateMachine stateMachine;
     protected PlayerController playerController;
     protected Rigidbody2D rb;
-    protected Animator animator;
+    protected Animator animator; // 这个字段可能为空
     
     protected float startTime;
     
@@ -17,6 +17,7 @@ public abstract class PlayerState
         this.stateMachine = stateMachine;
         this.playerController = playerController;
         this.rb = playerController.GetComponent<Rigidbody2D>();
+        // 尝试获取Animator组件，但如果不存在也不会报错
         this.animator = playerController.GetComponent<Animator>();
     }
     

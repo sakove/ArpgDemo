@@ -40,6 +40,10 @@ public class CombatController : MonoBehaviour
     private PlayerController playerController;
     private Animator animator;
     
+    // 当前使用的技能，用于跟踪并在适当的时候调用OnSkillEnd
+    private Skill currentActiveSkill;
+    private float currentSkillEndTime;
+    
     // 属性
     public int CurrentComboIndex => currentComboIndex;
     public float AttackMovementFactor => attackMovementFactor;
@@ -95,6 +99,14 @@ public class CombatController : MonoBehaviour
         
         // 检查连击窗口
         isInComboWindow = Time.time <= lastAttackTime + comboWindowTime;
+        
+        // 检查当前技能是否结束
+        if (currentActiveSkill != null && Time.time >= currentSkillEndTime)
+        {
+            // 调用技能结束方法以清理
+            currentActiveSkill.OnSkillEnd(gameObject);
+            currentActiveSkill = null;
+        }
     }
     
     /// <summary>
@@ -104,8 +116,18 @@ public class CombatController : MonoBehaviour
     {
         if (basicAttack != null)
         {
+            // 如果有活动技能，先结束它
+            if (currentActiveSkill != null)
+            {
+                currentActiveSkill.OnSkillEnd(gameObject);
+            }
+            
             // 激活基础攻击技能
             basicAttack.Activate(gameObject);
+            
+            // 设置当前活动技能和结束时间
+            currentActiveSkill = basicAttack;
+            currentSkillEndTime = Time.time + basicAttack.GetDuration();
             
             // 更新连击状态
             lastAttackTime = Time.time;
@@ -134,8 +156,18 @@ public class CombatController : MonoBehaviour
         // 检查技能是否存在且可用
         if (skill != null && CanUseSkill(slotIndex))
         {
+            // 如果有活动技能，先结束它
+            if (currentActiveSkill != null)
+            {
+                currentActiveSkill.OnSkillEnd(gameObject);
+            }
+            
             // 激活技能
             skill.Activate(gameObject);
+            
+            // 设置当前活动技能和结束时间
+            currentActiveSkill = skill;
+            currentSkillEndTime = Time.time + skill.GetDuration();
             
             // 设置冷却
             skillCooldowns[slotIndex] = skill.cooldown;

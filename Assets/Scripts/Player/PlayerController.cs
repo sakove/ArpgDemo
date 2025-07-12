@@ -3,76 +3,107 @@ using UnityEngine.InputSystem;
 using System.Collections;
 
 /// <summary>
-/// 玩家控制器，负责处理玩家的基本移动和输入
+/// 玩家控制器，负责处理玩家的基本移动和输入。
+/// 该类既可以作为直接的输入处理器，也可以作为事件监听者，
+/// 具体行为由 `useEventBasedInput` 字段决定。
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour, IDamageable
 {
-    [Header("Movement Settings")]
+    [Header("移动设置")]
+    [Tooltip("玩家的正常移动速度")]
     [SerializeField] private float moveSpeed = 8f;
+    [Tooltip("玩家跳跃时施加的初始力量")]
     [SerializeField] private float jumpForce = 16f;
+    [Tooltip("玩家下落时应用的重力倍率，用于实现更快的下落感")]
     [SerializeField] private float fallMultiplier = 2.5f;
+    [Tooltip("玩家提前松开跳跃键时应用的重力倍率，用于实现小跳")]
     [SerializeField] private float lowJumpMultiplier = 2f;
+    [Tooltip("土狼时间：允许玩家在离开平台后的一小段时间内仍然可以跳跃")]
     [SerializeField] private float coyoteTime = 0.1f;
+    [Tooltip("跳跃缓冲时间：允许玩家在落地前的一小段时间内输入跳跃，落地后会自动执行")]
     [SerializeField] private float jumpBufferTime = 0.1f;
+    [Tooltip("空中控制系数：玩家在空中时，移动输入的控制能力（0为无控制，1为完全控制）")]
     [SerializeField] private float airControlFactor = 0.8f;
     
-    [Header("Ground Check")]
+    [Header("地面检测")]
+    [Tooltip("用于检测地面的参考点")]
     [SerializeField] private Transform groundCheck;
+    [Tooltip("地面检测的半径")]
     [SerializeField] private float groundCheckRadius = 0.2f;
+    [Tooltip("定义哪些层被视作地面")]
     [SerializeField] private LayerMask groundLayer;
     
-    [Header("Dash Settings")]
-    [SerializeField] private float dashSpeed = 20f;
-    [SerializeField] private float dashDuration = 0.15f;
-    [SerializeField] private float dashCooldown = 1f;
+    [Header("冲刺设置")]
+    [Tooltip("冲刺时的移动速度")]
+    [SerializeField] private float sprintSpeed = 20f;
+    [Tooltip("单次冲刺的持续时间（秒）")]
+    [SerializeField] private float sprintDuration = 0.15f;
+    [Tooltip("冲刺技能的冷却时间（秒）")]
+    [SerializeField] private float sprintCooldown = 1f;
     
-    [Header("Health Settings")]
+    [Header("生命值设置")]
+    [Tooltip("玩家的最大生命值")]
     [SerializeField] private int maxHealth = 100;
+    [Tooltip("玩家受伤后的无敌时间（秒）")]
     [SerializeField] private float invincibilityTime = 1f;
     
-    // 组件
-    private Rigidbody2D rb;
-    private Animator animator;
-    private PlayerInput playerInput;
-    private PlayerStateMachine stateMachine;
-    private CombatController combatController;
+    // --- 组件引用 ---
+    private Rigidbody2D rb;                     // 物理刚体组件
+    private Animator animator;                  // 动画控制器组件
+    private PlayerInput playerInput;            // Unity输入系统组件
+    private PlayerStateMachine stateMachine;    // 玩家状态机
+    private CombatController combatController;  // 战斗控制器
     
-    // 输入动作
-    private InputAction moveAction;
-    private InputAction jumpAction;
-    private InputAction attackAction;
-    private InputAction dashAction;
+    // --- 移动状态变量 ---
+    private Vector2 moveInput;                  // 当前的移动输入向量
+    private bool isGrounded;                    // 玩家当前是否在地面上
+    private bool isFacingRight = true;          // 玩家当前是否朝向右边
+    private float coyoteTimeCounter;            // 土狼时间的计时器
+    private float jumpBufferCounter;            // 跳跃缓冲的计时器
+    private bool isSprinting;                   // 玩家当前是否正在冲刺
+    private float sprintCooldownCounter;        // 冲刺冷却时间的计时器
     
-    // 移动状态
-    private Vector2 moveInput;
-    private bool isGrounded;
-    private bool isFacingRight = true;
-    private float coyoteTimeCounter;
-    private float jumpBufferCounter;
-    private float dashCooldownCounter;
+    // --- 健康状态变量 ---
+    private int currentHealth;                  // 当前生命值
+    private bool isInvincible;                  // 当前是否处于无敌状态
+    private float invincibilityCounter;         // 无敌状态的计时器
     
-    // 健康状态
-    private int currentHealth;
-    private bool isInvincible;
-    private float invincibilityCounter;
+    // --- 输入状态标志 ---
+    private bool jumpInput;                     // 跳跃键是否被按下
+    private bool jumpHeld;                      // 跳跃键是否被按住
+    private bool attackInput;                   // 攻击键是否被按下
+    private bool sprintInput;                   // 冲刺键是否被按下
     
-    // 输入状态
-    private bool jumpInput;
-    private bool jumpHeld;
-    private bool attackInput;
-    private bool dashInput;
+    // --- 输入系统选择 ---
+    [Header("输入系统")]
+    [Tooltip("如果为true，将使用事件驱动的输入系统。需要确保InputManager在场景中。")]
+    [SerializeField] private bool useEventBasedInput = true;
     
-    // 属性
+    // --- 公开属性（供状态机等外部脚本访问） ---
+    
+    /// <summary> 玩家当前是否可以转向 </summary>
+    public bool CanFlip { get; set; } = true;
+
+    /// <summary> 玩家当前是否在地面上 </summary>
     public bool IsGrounded => isGrounded;
+    /// <summary> 土狼时间的剩余时间 </summary>
     public float CoyoteTimeCounter => coyoteTimeCounter;
+    /// <summary> 跳跃键是否被按下 </summary>
     public bool JumpInput => jumpInput;
+    /// <summary> 跳跃键是否被持续按住 </summary>
     public bool JumpHeld => jumpHeld;
+    /// <summary> 攻击键是否被按下 </summary>
     public bool AttackInput => attackInput;
-    public bool DashInput => dashInput;
-    public bool CanDash => dashCooldownCounter <= 0f;
-    public float DashDuration => dashDuration;
+    /// <summary> 冲刺键是否被按下 </summary>
+    public bool SprintInput => sprintInput;
+    /// <summary> 当前是否可以冲刺（冷却时间是否结束） </summary>
+    public bool CanSprint => sprintCooldownCounter <= 0f;
+    /// <summary> 冲刺的持续时间 </summary>
+    public float SprintDuration => sprintDuration;
+    /// <summary> 玩家当前是否朝向右边 </summary>
     public bool IsFacingRight => isFacingRight;
+    /// <summary> 空中控制能力系数 </summary>
     public float AirControlFactor => airControlFactor;
     
     private void Awake()
@@ -85,15 +116,6 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 尝试获取状态机和战斗控制器（可能尚未添加）
         stateMachine = GetComponent<PlayerStateMachine>();
         combatController = GetComponent<CombatController>();
-        
-        // 设置输入动作
-        if (playerInput != null)
-        {
-            moveAction = playerInput.actions["Move"];
-            jumpAction = playerInput.actions["Jump"];
-            attackAction = playerInput.actions["Attack"];
-            dashAction = playerInput.actions["Dash"];
-        }
         
         // 如果地面检测点为空，创建一个地面检测点
         if (groundCheck == null)
@@ -116,26 +138,100 @@ public class PlayerController : MonoBehaviour, IDamageable
     
     private void OnEnable()
     {
-        // 订阅输入事件
-        if (jumpAction != null) jumpAction.performed += OnJumpPerformed;
-        if (jumpAction != null) jumpAction.canceled += OnJumpCanceled;
-        if (attackAction != null) attackAction.performed += OnAttackPerformed;
-        if (dashAction != null) dashAction.performed += OnDashPerformed;
+        // 根据选择的输入系统订阅事件
+        if (useEventBasedInput)
+        {
+            SubscribeToInputEvents();
+        }
     }
     
     private void OnDisable()
     {
-        // 取消订阅输入事件
-        if (jumpAction != null) jumpAction.performed -= OnJumpPerformed;
-        if (jumpAction != null) jumpAction.canceled -= OnJumpCanceled;
-        if (attackAction != null) attackAction.performed -= OnAttackPerformed;
-        if (dashAction != null) dashAction.performed -= OnDashPerformed;
+        // 根据选择的输入系统取消订阅事件
+        if (useEventBasedInput)
+        {
+            UnsubscribeFromInputEvents();
+        }
+    }
+    
+    private void SubscribeToInputEvents()
+    {
+        // 自动查找挂载在同一对象上的所有InputEventListener
+        var listeners = GetComponents<InputEventListener>();
+        foreach (var listener in listeners)
+        {
+            if (listener.eventSO == null) continue;
+
+            // 尝试将事件SO转换为InputEventSO以访问其类型
+            if (listener.eventSO is InputEventSO inputEvent)
+            {
+                // 根据事件类型订阅不同的回调
+                switch (inputEvent.inputType)
+                {
+                    case InputEventType.Move:
+                        listener.AddValueChangedListener(OnMoveEventReceived);
+                        break;
+                    case InputEventType.Jump:
+                        listener.AddPressedListener(OnJumpEventPressed);
+                        listener.AddReleasedListener(OnJumpEventReleased);
+                        break;
+                    case InputEventType.Sprint:
+                        listener.AddPressedListener(OnSprintEventPressed);
+                        listener.AddReleasedListener(OnSprintEventReleased);
+                        break;
+                    case InputEventType.Attack:
+                        listener.AddPressedListener(OnAttackEventPressed);
+                        break;
+                    // 其他类型的输入可以在这里扩展
+                }
+            }
+        }
+    }
+    
+    private void UnsubscribeFromInputEvents()
+    {
+        // UnityEvent在对象销毁时会自动处理大部分反注册逻辑，
+        // 但如果需要手动、精确地移除，可以扩展此方法。
+        // 为保持简单，暂时留空。
+    }
+    
+    // 基于事件的输入处理方法
+    private void OnMoveEventReceived(InputEventData data)
+    {
+        moveInput = data.Vector;
+    }
+    
+    private void OnJumpEventPressed(InputEventData data)
+    {
+        jumpInput = true;
+        jumpHeld = true;
+        SetJumpBuffer();
+    }
+    
+    private void OnJumpEventReleased(InputEventData data)
+    {
+        jumpInput = false;
+        jumpHeld = false;
+    }
+    
+    private void OnAttackEventPressed(InputEventData data)
+    {
+        attackInput = true;
+    }
+    
+    private void OnSprintEventPressed(InputEventData data)
+    {
+        sprintInput = true;
+    }
+    
+    private void OnSprintEventReleased(InputEventData data)
+    {
+        sprintInput = false;
     }
     
     private void Update()
     {
-        // 获取移动输入
-        moveInput = moveAction.ReadValue<Vector2>();
+        // 使用事件系统时，moveInput已经通过事件更新，无需在此读取
         
         // 检查是否接触地面
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
@@ -157,9 +253,9 @@ public class PlayerController : MonoBehaviour, IDamageable
         }
         
         // 处理冲刺冷却
-        if (dashCooldownCounter > 0)
+        if (sprintCooldownCounter > 0)
         {
-            dashCooldownCounter -= Time.deltaTime;
+            sprintCooldownCounter -= Time.deltaTime;
         }
         
         // 处理无敌时间
@@ -177,7 +273,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         
         // 重置输入状态
         attackInput = false;
-        dashInput = false;
+        sprintInput = false;
     }
     
     /// <summary>
@@ -232,59 +328,50 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// 执行冲刺
     /// </summary>
     /// <param name="direction">冲刺方向</param>
-    public void PerformDash(Vector2 direction)
+    public void PerformSprint(Vector2 direction)
     {
-        // 应用冲刺速度
-        rb.linearVelocity = direction.normalized * dashSpeed;
+        if (isSprinting) return;
+
+        isSprinting = true;
+        rb.linearVelocity = direction.normalized * sprintSpeed;
         
-        // 暂时禁用重力
-        rb.gravityScale = 0f;
-        
-        // 播放冲刺音效和特效
-        // AudioManager.Instance?.PlaySound("Dash");
-        // EffectsManager.Instance?.PlayEffect("DashTrail", transform.position);
-        
-        // 相机震动（如果有CameraShake组件）
-        if (FindObjectOfType<CameraShake>() != null)
-        {
-            FindObjectOfType<CameraShake>().ShakeCamera(0.1f, 0.2f);
-        }
+        // 可以在这里添加冲刺开始的音效或特效
+        // AudioManager.Instance?.PlaySound("Sprint");
+        // EffectsManager.Instance?.PlayEffect("SprintTrail", transform.position);
     }
     
-    /// <summary>
-    /// 应用冲刺速度
-    /// </summary>
-    /// <param name="direction">冲刺方向</param>
-    public void ApplyDashVelocity(Vector2 direction)
+    public void EndSprint()
     {
-        rb.linearVelocity = direction.normalized * dashSpeed;
+        isSprinting = false;
+        // 可以在这里添加冲刺结束的逻辑
     }
     
-    /// <summary>
-    /// 恢复重力
-    /// </summary>
-    public void RestoreGravity()
+    public void ApplySprintVelocity(Vector2 direction)
     {
-        rb.gravityScale = 1f;
+        rb.linearVelocity = direction.normalized * sprintSpeed;
     }
-    
+
     /// <summary>
-    /// 开始冲刺冷却
+    /// 开始冲刺技能冷却
     /// </summary>
-    public void StartDashCooldown()
+    public void StartSprintCooldown()
     {
-        dashCooldownCounter = dashCooldown;
+        sprintCooldownCounter = sprintCooldown;
     }
     
     /// <summary>
-    /// 应用下落加速度
+    /// 应用下落加速度，并处理可变跳跃高度的逻辑
     /// </summary>
     public void ApplyFallMultiplier()
     {
+        // 核心改动：优化跳跃手感，消除最高点附近的“漂浮感”。
+        // 只要角色速度向量向下（即正在下落），就施加一个额外的重力倍率。
         if (rb.linearVelocity.y < 0)
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
         }
+        // 如果角色正在上升，并且玩家已经松开了跳跃键，则施加另一个重力倍率。
+        // 这会让角色更快地停止上升，从而实现“小跳”。
         else if (rb.linearVelocity.y > 0 && !jumpHeld)
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
@@ -328,38 +415,13 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     private void Flip()
     {
+        if (!CanFlip) return;
+
         isFacingRight = !isFacingRight;
         Vector3 theScale = transform.localScale;
         theScale.x *= -1;
         transform.localScale = theScale;
     }
-    
-    #region Input Callbacks
-    
-    private void OnJumpPerformed(InputAction.CallbackContext context)
-    {
-        jumpInput = true;
-        jumpHeld = true;
-        SetJumpBuffer();
-    }
-    
-    private void OnJumpCanceled(InputAction.CallbackContext context)
-    {
-        jumpInput = false;
-        jumpHeld = false;
-    }
-    
-    private void OnAttackPerformed(InputAction.CallbackContext context)
-    {
-        attackInput = true;
-    }
-    
-    private void OnDashPerformed(InputAction.CallbackContext context)
-    {
-        dashInput = true;
-    }
-    
-    #endregion
     
     #region IDamageable Implementation
     

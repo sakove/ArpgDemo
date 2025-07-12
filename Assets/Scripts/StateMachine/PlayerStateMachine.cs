@@ -10,6 +10,7 @@ public class PlayerStateMachine : MonoBehaviour
     
     // 玩家控制器引用
     private PlayerController playerController;
+    private Animator animator;
     
     // 状态引用
     public PlayerIdleState IdleState { get; private set; }
@@ -17,11 +18,12 @@ public class PlayerStateMachine : MonoBehaviour
     public PlayerJumpingState JumpingState { get; private set; }
     public PlayerFallingState FallingState { get; private set; }
     public PlayerAttackingState AttackingState { get; private set; }
-    public PlayerDashingState DashingState { get; private set; }
+    public PlayerSprintingState SprintingState { get; private set; }
     
     private void Awake()
     {
         playerController = GetComponent<PlayerController>();
+        animator = GetComponent<Animator>();
         
         // 初始化所有状态
         IdleState = new PlayerIdleState(this, playerController);
@@ -29,7 +31,7 @@ public class PlayerStateMachine : MonoBehaviour
         JumpingState = new PlayerJumpingState(this, playerController);
         FallingState = new PlayerFallingState(this, playerController);
         AttackingState = new PlayerAttackingState(this, playerController);
-        DashingState = new PlayerDashingState(this, playerController);
+        SprintingState = new PlayerSprintingState(this, playerController);
     }
     
     private void Start()
@@ -43,6 +45,12 @@ public class PlayerStateMachine : MonoBehaviour
     {
         // 更新当前状态的逻辑
         currentState?.LogicUpdate();
+        
+        // 持续将玩家的地面状态同步到Animator
+        if (animator != null)
+        {
+            animator.SetBool("IsGrounded", playerController.IsGrounded);
+        }
     }
     
     private void FixedUpdate()

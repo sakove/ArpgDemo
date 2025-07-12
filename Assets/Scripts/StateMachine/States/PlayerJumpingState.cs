@@ -64,11 +64,10 @@ public class PlayerJumpingState : PlayerState
             return;
         }
         
-        // 检查是否按下冲刺键（允许空中冲刺）
-        if (playerController.DashInput && playerController.CanDash)
+        // 允许在空中冲刺
+        if (playerController.SprintInput && playerController.CanSprint)
         {
-            stateMachine.ChangeState(stateMachine.DashingState);
-            return;
+            stateMachine.ChangeState(stateMachine.SprintingState);
         }
     }
     

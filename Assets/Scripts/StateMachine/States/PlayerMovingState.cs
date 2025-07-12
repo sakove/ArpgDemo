@@ -13,6 +13,7 @@ public class PlayerMovingState : PlayerState
         
         // 播放移动动画或设置动画参数
         animator?.SetBool("IsMoving", true);
+        animator?.SetFloat("VerticalSpeed", 0f); // 确保在地面时垂直速度为0
     }
     
     public override void Exit()
@@ -26,50 +27,29 @@ public class PlayerMovingState : PlayerState
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-        
-        // 获取移动输入
-        Vector2 moveInput = playerController.GetMoveInput();
-        
-        // 如果没有移动输入，切换回闲置状态
-        if (Mathf.Abs(moveInput.x) < 0.1f)
+
+        // 更新动画参数
+        animator?.SetFloat("Speed", Mathf.Abs(playerController.GetMoveInput().x));
+
+        // 检查是否停止移动
+        if (playerController.GetMoveInput().x == 0)
         {
             stateMachine.ChangeState(stateMachine.IdleState);
-            return;
         }
-        
-        // 设置动画参数
-        animator?.SetFloat("Speed", Mathf.Abs(moveInput.x));
-        
-        // 检查是否按下跳跃键
-        if (playerController.JumpInput)
+        // 检查跳跃输入
+        else if (playerController.JumpInput)
         {
-            // 检查是否在地面上或在土狼时间内
-            if (playerController.IsGrounded || playerController.CoyoteTimeCounter > 0)
-            {
-                stateMachine.ChangeState(stateMachine.JumpingState);
-                return;
-            }
+            stateMachine.ChangeState(stateMachine.JumpingState);
         }
-        
-        // 检查是否按下攻击键
-        if (playerController.AttackInput)
+        // 检查攻击输入
+        else if (playerController.AttackInput)
         {
             stateMachine.ChangeState(stateMachine.AttackingState);
-            return;
         }
-        
-        // 检查是否按下冲刺键
-        if (playerController.DashInput && playerController.CanDash)
+        // 检查冲刺输入
+        else if (playerController.SprintInput && playerController.CanSprint)
         {
-            stateMachine.ChangeState(stateMachine.DashingState);
-            return;
-        }
-        
-        // 检查是否不在地面上且下落
-        if (!playerController.IsGrounded && rb.linearVelocity.y < -0.1f)
-        {
-            stateMachine.ChangeState(stateMachine.FallingState);
-            return;
+            stateMachine.ChangeState(stateMachine.SprintingState);
         }
     }
     

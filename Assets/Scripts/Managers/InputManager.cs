@@ -8,27 +8,44 @@ using System.Collections.Generic;
 /// </summary>
 public class InputManager : MonoBehaviour
 {
-    [Header("输入事件")]
-    [SerializeField] private InputEventSO _attackEvent;
+    [Header("动作事件")]
+    [SerializeField] private InputEventSO _moveEvent;
     [SerializeField] private InputEventSO _jumpEvent;
-    [SerializeField] private InputEventSO _dashEvent;
+    [SerializeField] private InputEventSO _sprintEvent;
+    [SerializeField] private InputEventSO _attackEvent;
     [SerializeField] private InputEventSO _interactEvent;
-    [SerializeField] private InputEventSO _skillEvent;
     
     [Header("调试设置")]
     [SerializeField] private bool _debugMode = false;
     
     // 输入动作引用
     private InputSystem_Actions _inputActions;
-    
-    // 输入状态
-    private Dictionary<string, bool> _inputStates = new Dictionary<string, bool>();
+
+    // 确保输入管理器是单例
+    private static InputManager _instance;
+    public static InputManager Instance { get { return _instance; } }
+
     
     private void Awake()
     {
+        // 单例模式设置
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        _instance = this;
+        
+        // 保证在场景转换时不被销毁
+        DontDestroyOnLoad(gameObject);
+        
         // 初始化输入系统
         _inputActions = new InputSystem_Actions();
+        
+        // 确保所有InputEventSO的InputType都被正确设置
+        ValidateInputEvents();
     }
+    
     
     private void OnEnable()
     {
@@ -48,134 +65,170 @@ public class InputManager : MonoBehaviour
         UnregisterInputCallbacks();
     }
     
+    private void ValidateInputEvents()
+    {
+        // 确保每个事件的InputType与其用途一致
+        if (_moveEvent != null && _moveEvent.inputType != InputEventType.Move)
+            _moveEvent.inputType = InputEventType.Move;
+            
+        if (_jumpEvent != null && _jumpEvent.inputType != InputEventType.Jump)
+            _jumpEvent.inputType = InputEventType.Jump;
+            
+        if (_sprintEvent != null && _sprintEvent.inputType != InputEventType.Sprint)
+            _sprintEvent.inputType = InputEventType.Sprint;
+            
+        if (_attackEvent != null && _attackEvent.inputType != InputEventType.Attack)
+            _attackEvent.inputType = InputEventType.Attack;
+            
+        if (_interactEvent != null && _interactEvent.inputType != InputEventType.Interact)
+            _interactEvent.inputType = InputEventType.Interact;
+    }
+    
     private void RegisterInputCallbacks()
     {
+        // 移动输入 - 需要连续监听
+        if (_moveEvent != null)
+        {
+            _inputActions.Player.Move.performed += OnMoveInput;
+            _inputActions.Player.Move.canceled += OnMoveInputCanceled;
+        }
+        
         // 攻击输入
-        _inputActions.Player.Attack.performed += ctx => OnAttackInput(ctx);
-        _inputActions.Player.Attack.canceled += ctx => OnAttackInputReleased(ctx);
+        if (_attackEvent != null)
+        {
+            _inputActions.Player.Attack.performed += OnAttackInput;
+            _inputActions.Player.Attack.canceled += OnAttackInputReleased;
+        }
         
         // 跳跃输入
-        _inputActions.Player.Jump.performed += ctx => OnJumpInput(ctx);
-        _inputActions.Player.Jump.canceled += ctx => OnJumpInputReleased(ctx);
+        if (_jumpEvent != null)
+        {
+            _inputActions.Player.Jump.performed += OnJumpInput;
+            _inputActions.Player.Jump.canceled += OnJumpInputReleased;
+        }
         
         // 冲刺输入
-        _inputActions.Player.Sprint.performed += ctx => OnDashInput(ctx);
-        _inputActions.Player.Sprint.canceled += ctx => OnDashInputReleased(ctx);
+        if (_sprintEvent != null)
+        {
+            _inputActions.Player.Sprint.performed += OnSprintInput;
+            _inputActions.Player.Sprint.canceled += OnSprintInputReleased;
+        }
         
         // 交互输入
-        _inputActions.Player.Interact.performed += ctx => OnInteractInput(ctx);
-        _inputActions.Player.Interact.canceled += ctx => OnInteractInputReleased(ctx);
-        
-        // 技能输入
-        //_inputActions.Player.Skill.performed += ctx => OnSkillInput(ctx);
-       // _inputActions.Player.Skill.canceled += ctx => OnSkillInputReleased(ctx);
+        if (_interactEvent != null)
+        {
+            _inputActions.Player.Interact.performed += OnInteractInput;
+            _inputActions.Player.Interact.canceled += OnInteractInputReleased;
+        }
     }
     
     private void UnregisterInputCallbacks()
     {
+        // 移动输入
+        if (_moveEvent != null)
+        {
+            _inputActions.Player.Move.performed -= OnMoveInput;
+            _inputActions.Player.Move.canceled -= OnMoveInputCanceled;
+        }
+        
         // 攻击输入
-        _inputActions.Player.Attack.performed -= ctx => OnAttackInput(ctx);
-        _inputActions.Player.Attack.canceled -= ctx => OnAttackInputReleased(ctx);
+        if (_attackEvent != null)
+        {
+            _inputActions.Player.Attack.performed -= OnAttackInput;
+            _inputActions.Player.Attack.canceled -= OnAttackInputReleased;
+        }
         
         // 跳跃输入
-        _inputActions.Player.Jump.performed -= ctx => OnJumpInput(ctx);
-        _inputActions.Player.Jump.canceled -= ctx => OnJumpInputReleased(ctx);
+        if (_jumpEvent != null)
+        {
+            _inputActions.Player.Jump.performed -= OnJumpInput;
+            _inputActions.Player.Jump.canceled -= OnJumpInputReleased;
+        }
         
         // 冲刺输入
-        _inputActions.Player.Sprint.performed -= ctx => OnDashInput(ctx);
-        _inputActions.Player.Sprint.canceled -= ctx => OnDashInputReleased(ctx);
+        if (_sprintEvent != null)
+        {
+            _inputActions.Player.Sprint.performed -= OnSprintInput;
+            _inputActions.Player.Sprint.canceled -= OnSprintInputReleased;
+        }
         
         // 交互输入
-        _inputActions.Player.Interact.performed -= ctx => OnInteractInput(ctx);
-        _inputActions.Player.Interact.canceled -= ctx => OnInteractInputReleased(ctx);
-        
-        // 技能输入
-        //_inputActions.Player.Skill.performed -= ctx => OnSkillInput(ctx);
-        //_inputActions.Player.Skill.canceled -= ctx => OnSkillInputReleased(ctx);
+        if (_interactEvent != null)
+        {
+            _inputActions.Player.Interact.performed -= OnInteractInput;
+            _inputActions.Player.Interact.canceled -= OnInteractInputReleased;
+        }
+    }
+    
+    #region Input Handlers
+    
+    // 移动输入处理
+    private void OnMoveInput(InputAction.CallbackContext context)
+    {
+        Vector2 moveVector = context.ReadValue<Vector2>();
+        if (_debugMode) Debug.Log($"移动: ({moveVector.x}, {moveVector.y})");
+        _moveEvent.TriggerVector(moveVector, this);
+    }
+    
+    private void OnMoveInputCanceled(InputAction.CallbackContext context)
+    {
+        if (_debugMode) Debug.Log("移动停止");
+        _moveEvent.TriggerVector(Vector2.zero, this);
     }
     
     // 攻击输入处理
     private void OnAttackInput(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("攻击按下");
-        _inputStates["Attack"] = true;
-        _attackEvent?.TriggerInput("pressed", this);
+        _attackEvent.TriggerPressed(this);
     }
     
     private void OnAttackInputReleased(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("攻击释放");
-        _inputStates["Attack"] = false;
-        _attackEvent?.TriggerInput("released", this);
+        _attackEvent.TriggerReleased(this);
     }
     
     // 跳跃输入处理
     private void OnJumpInput(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("跳跃按下");
-        _inputStates["Jump"] = true;
-        _jumpEvent?.TriggerInput("pressed", this);
+        _jumpEvent.TriggerPressed(this);
     }
     
     private void OnJumpInputReleased(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("跳跃释放");
-        _inputStates["Jump"] = false;
-        _jumpEvent?.TriggerInput("released", this);
+        _jumpEvent.TriggerReleased(this);
     }
     
     // 冲刺输入处理
-    private void OnDashInput(InputAction.CallbackContext context)
+    private void OnSprintInput(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("冲刺按下");
-        _inputStates["Dash"] = true;
-        _dashEvent?.TriggerInput("pressed", this);
+        _sprintEvent.TriggerPressed(this);
     }
     
-    private void OnDashInputReleased(InputAction.CallbackContext context)
+    private void OnSprintInputReleased(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("冲刺释放");
-        _inputStates["Dash"] = false;
-        _dashEvent?.TriggerInput("released", this);
+        _sprintEvent.TriggerReleased(this);
     }
     
     // 交互输入处理
     private void OnInteractInput(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("交互按下");
-        _inputStates["Interact"] = true;
-        _interactEvent?.TriggerInput("pressed", this);
+        _interactEvent.TriggerPressed(this);
     }
     
     private void OnInteractInputReleased(InputAction.CallbackContext context)
     {
         if (_debugMode) Debug.Log("交互释放");
-        _inputStates["Interact"] = false;
-        _interactEvent?.TriggerInput("released", this);
+        _interactEvent.TriggerReleased(this);
     }
     
-    // 技能输入处理
-    private void OnSkillInput(InputAction.CallbackContext context)
-    {
-        if (_debugMode) Debug.Log("技能按下");
-        _inputStates["Skill"] = true;
-        _skillEvent?.TriggerInput("pressed", this);
-    }
-    
-    private void OnSkillInputReleased(InputAction.CallbackContext context)
-    {
-        if (_debugMode) Debug.Log("技能释放");
-        _inputStates["Skill"] = false;
-        _skillEvent?.TriggerInput("released", this);
-    }
-    
-    // 检查输入状态
-    public bool IsInputActive(string inputName)
-    {
-        if (_inputStates.TryGetValue(inputName, out bool state))
-            return state;
-        return false;
-    }
+    #endregion
     
     // 动态切换输入映射
     public void SwitchInputMap(string mapName)
@@ -198,5 +251,17 @@ public class InputManager : MonoBehaviour
                 Debug.LogWarning($"未知的输入映射: {mapName}");
                 break;
         }
+    }
+    
+    // 禁用所有输入（比如在游戏暂停或对话期间）
+    public void DisableAllInput()
+    {
+        _inputActions.Disable();
+    }
+    
+    // 启用所有输入
+    public void EnableAllInput()
+    {
+        _inputActions.Enable();
     }
 } 

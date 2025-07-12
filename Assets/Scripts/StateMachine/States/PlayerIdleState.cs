@@ -13,6 +13,7 @@ public class PlayerIdleState : PlayerState
         
         // 设置动画参数
         animator?.SetFloat("Speed", 0f);
+        animator?.SetFloat("VerticalSpeed", 0f); // 确保在地面时垂直速度为0
         
         // 确保玩家停止水平移动
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -22,47 +23,25 @@ public class PlayerIdleState : PlayerState
     {
         base.LogicUpdate();
         
-        // 获取移动输入
-        Vector2 moveInput = playerController.GetMoveInput();
-        
-        // 检查是否有移动输入
-        if (Mathf.Abs(moveInput.x) > 0.1f)
+        // 检查移动输入
+        if (playerController.GetMoveInput().x != 0)
         {
-            // 切换到移动状态
             stateMachine.ChangeState(stateMachine.MovingState);
-            return;
         }
-        
-        // 检查是否按下跳跃键
-        if (playerController.JumpInput)
+        // 检查跳跃输入
+        else if (playerController.JumpInput)
         {
-            // 检查是否在地面上或在土狼时间内
-            if (playerController.IsGrounded || playerController.CoyoteTimeCounter > 0)
-            {
-                stateMachine.ChangeState(stateMachine.JumpingState);
-                return;
-            }
+            stateMachine.ChangeState(stateMachine.JumpingState);
         }
-        
-        // 检查是否按下攻击键
-        if (playerController.AttackInput)
+        // 检查攻击输入
+        else if (playerController.AttackInput) // 暂时移除 CanAttack 检查
         {
             stateMachine.ChangeState(stateMachine.AttackingState);
-            return;
         }
-        
-        // 检查是否按下冲刺键
-        if (playerController.DashInput && playerController.CanDash)
+        // 检查冲刺输入
+        else if (playerController.SprintInput && playerController.CanSprint)
         {
-            stateMachine.ChangeState(stateMachine.DashingState);
-            return;
-        }
-        
-        // 检查是否不在地面上且下落
-        if (!playerController.IsGrounded && rb.linearVelocity.y < -0.1f)
-        {
-            stateMachine.ChangeState(stateMachine.FallingState);
-            return;
+            stateMachine.ChangeState(stateMachine.SprintingState);
         }
     }
     

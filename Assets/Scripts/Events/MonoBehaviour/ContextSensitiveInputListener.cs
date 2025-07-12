@@ -161,41 +161,49 @@ public class ContextSensitiveInputListener : InputEventListener
         }
     }
     
-    protected override bool CanProcessEvent(string inputValue)
+    protected override bool CanProcessEvent(InputEventData data)
     {
         // 首先检查基础条件
-        if (!base.CanProcessEvent(inputValue))
+        if (!base.CanProcessEvent(data))
+            return false;
+            
+        // 只响应按下事件
+        if (data.InputState != InputState.Pressed)
             return false;
             
         // 只有当有可交互对象时才能交互
         return _currentInteractable != null;
     }
     
-    public override void OnEventRaised(string inputValue)
+    public override void OnEventRaised(InputEventData data)
     {
         // 如果条件不满足，则不响应事件
-        if (_useCondition && !CanProcessEvent(inputValue))
+        if (_useCondition && !CanProcessEvent(data))
             return;
             
-        // 根据交互对象类型执行不同的交互逻辑
-        switch (_currentInteractableType)
+        // 只处理按下事件
+        if (data.InputState == InputState.Pressed)
         {
-            case InteractableType.Enemy:
-                InteractWithEnemy();
-                break;
-            case InteractableType.Item:
-                InteractWithItem();
-                break;
-            case InteractableType.NPC:
-                InteractWithNPC();
-                break;
-            case InteractableType.Object:
-                InteractWithObject();
-                break;
+            // 根据交互对象类型执行不同的交互逻辑
+            switch (_currentInteractableType)
+            {
+                case InteractableType.Enemy:
+                    InteractWithEnemy();
+                    break;
+                case InteractableType.Item:
+                    InteractWithItem();
+                    break;
+                case InteractableType.NPC:
+                    InteractWithNPC();
+                    break;
+                case InteractableType.Object:
+                    InteractWithObject();
+                    break;
+            }
         }
         
         // 调用基类方法，触发通用响应
-        base.OnEventRaised(inputValue);
+        base.OnEventRaised(data);
     }
     
     private void InteractWithEnemy()
