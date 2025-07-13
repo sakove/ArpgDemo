@@ -17,3 +17,4 @@ MonoBehaviour:
   _debugMode: 0
   inputDescription: 
   defaultInputKey: 
+  inputType: 1

@@ -12,10 +12,7 @@ public class DashSlashSkill : Skill
     
     public DashSlashSkill()
     {
-        // 使用动画覆盖控制类型
-        animationControlType = AnimationControlType.AnimationOverride;
-        // 确保有一个技能动画片段被分配
-        // skillAnimation 需要在Inspector中设置
+        // 注意：现在我们使用动画覆盖方式，需要在Inspector中设置skillAnimation
     }
     
     public override void Activate(GameObject user)

@@ -114,6 +114,12 @@ public enum InputEventType
     Sprint,     // 冲刺
     Attack,     // 攻击
     Interact,   // 交互
-    Skill,      // 技能
+    Skill1,     // 技能1
+    Skill2,     // 技能2
+    Skill3,     // 技能3
+    Skill4,     // 技能4
+    Skill5,     // 技能5
+    Skill6,     // 技能6
+    Skill7,     // 技能7
     Menu        // 菜单
 } 

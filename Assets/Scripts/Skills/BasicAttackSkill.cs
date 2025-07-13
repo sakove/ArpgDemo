@@ -3,13 +3,10 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BasicAttack", menuName = "Skills/Basic Attack")]
 public class BasicAttackSkill : Skill
 {
-    // 添加构造函数，确保基础攻击使用正确的动画触发器名称
+    // 添加构造函数，确保基础攻击使用正确的动画
     public BasicAttackSkill()
     {
-        // 将基础攻击的动画触发器设置为"Attack"而不是默认的"Skill"
-        animationTriggerName = "Attack";
-        // 确保使用触发器控制类型
-        animationControlType = AnimationControlType.Trigger;
+        // 注意：现在我们使用动画覆盖方式，需要在Inspector中设置skillAnimation
     }
 
     [Header("攻击参数")]

@@ -19,6 +19,7 @@ public class PlayerStateMachine : MonoBehaviour
     public PlayerFallingState FallingState { get; private set; }
     public PlayerAttackingState AttackingState { get; private set; }
     public PlayerSprintingState SprintingState { get; private set; }
+    public PlayerUsingSkillState UsingSkillState { get; private set; }
     
     private void Awake()
     {
@@ -32,6 +33,7 @@ public class PlayerStateMachine : MonoBehaviour
         FallingState = new PlayerFallingState(this, playerController);
         AttackingState = new PlayerAttackingState(this, playerController);
         SprintingState = new PlayerSprintingState(this, playerController);
+        UsingSkillState = new PlayerUsingSkillState(this, playerController);
     }
     
     private void Start()
@@ -74,6 +76,36 @@ public class PlayerStateMachine : MonoBehaviour
         
         // 调试输出
         Debug.Log($"Changed to state: {newState.GetType().Name}");
+    }
+    
+    /// <summary>
+    /// 切换到技能使用状态
+    /// </summary>
+    /// <param name="newState">要切换到的新状态（必须是UsingSkillState）</param>
+    /// <param name="skill">要使用的技能</param>
+    public void ChangeState(PlayerState newState, Skill skill)
+    {
+        // 确保新状态是技能使用状态
+        if (newState is PlayerUsingSkillState skillState)
+        {
+            // 设置技能
+            skillState.SetActiveSkill(skill);
+            
+            // 退出当前状态
+            currentState?.Exit();
+            
+            // 进入新状态
+            currentState = newState;
+            currentState.Enter();
+            
+            // 调试输出
+            Debug.Log($"Changed to state: {newState.GetType().Name} with skill: {skill.skillName}");
+        }
+        else
+        {
+            // 如果不是技能使用状态，则使用普通的状态切换
+            ChangeState(newState);
+        }
     }
     
     /// <summary>

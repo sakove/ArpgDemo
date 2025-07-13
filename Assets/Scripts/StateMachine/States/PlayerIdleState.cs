@@ -2,9 +2,12 @@ using UnityEngine;
 
 public class PlayerIdleState : PlayerState
 {
+    private CombatController combatController;
+    
     public PlayerIdleState(PlayerStateMachine stateMachine, PlayerController playerController) 
         : base(stateMachine, playerController)
     {
+        combatController = playerController.GetComponent<CombatController>();
     }
     
     public override void Enter()
@@ -42,6 +45,69 @@ public class PlayerIdleState : PlayerState
         else if (playerController.SprintInput && playerController.CanSprint)
         {
             stateMachine.ChangeState(stateMachine.SprintingState);
+        }
+        // 检查技能1输入
+        else if (playerController.Skill1Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(0);
+            if (skill != null && combatController.CanUseSkill(0))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能2输入
+        else if (playerController.Skill2Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(1);
+            if (skill != null && combatController.CanUseSkill(1))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能3输入
+        else if (playerController.Skill3Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(2);
+            if (skill != null && combatController.CanUseSkill(2))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能4输入
+        else if (playerController.Skill4Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(3);
+            if (skill != null && combatController.CanUseSkill(3))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能5输入
+        else if (playerController.Skill5Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(4);
+            if (skill != null && combatController.CanUseSkill(4))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能6输入
+        else if (playerController.Skill6Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(5);
+            if (skill != null && combatController.CanUseSkill(5))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
+        }
+        // 检查技能7输入
+        else if (playerController.Skill7Input && combatController != null)
+        {
+            Skill skill = combatController.GetEquippedSkill(6);
+            if (skill != null && combatController.CanUseSkill(6))
+            {
+                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
+            }
         }
     }
     

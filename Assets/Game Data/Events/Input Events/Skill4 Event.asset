@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 343b6c8c6b9d13145b27868846b627e6, type: 3}
-  m_Name: Skill2 Event
+  m_Name: Skill4 Event
   m_EditorClassIdentifier: 
   description: 
   lastSender: 
   _debugMode: 0
   inputDescription: 
   defaultInputKey: 
-  inputType: 6
+  inputType: 8

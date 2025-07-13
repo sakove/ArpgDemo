@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// 战斗控制器，负责处理玩家的战斗相关逻辑
@@ -11,7 +10,7 @@ public class CombatController : MonoBehaviour
     [SerializeField] private Skill basicAttack;
     
     [Header("技能槽")]
-    [SerializeField] private Skill[] equippedSkills = new Skill[3];
+    [SerializeField] private Skill[] equippedSkills = new Skill[7];
     
     [Header("连击设置")]
     [SerializeField] private float comboResetTime = 1.5f;
@@ -21,11 +20,7 @@ public class CombatController : MonoBehaviour
     [SerializeField] private bool canMoveWhileAttacking = false;
     [SerializeField] private float attackMovementFactor = 0.3f;
     
-    // 输入引用
-    private PlayerInput playerInput;
-    private InputAction skill1Action;
-    private InputAction skill2Action;
-    private InputAction skill3Action;
+
     
     // 连击状态
     private int currentComboIndex = 0;
@@ -34,7 +29,7 @@ public class CombatController : MonoBehaviour
     private bool isInComboWindow = false;
     
     // 冷却状态
-    private float[] skillCooldowns = new float[3];
+    private float[] skillCooldowns = new float[7];
     
     // 组件引用
     private PlayerController playerController;
@@ -53,31 +48,6 @@ public class CombatController : MonoBehaviour
         // 获取组件
         playerController = GetComponent<PlayerController>();
         animator = GetComponent<Animator>();
-        playerInput = GetComponent<PlayerInput>();
-        
-        // 设置输入动作
-        if (playerInput != null)
-        {
-            skill1Action = playerInput.actions["Skill1"];
-            skill2Action = playerInput.actions["Skill2"];
-            skill3Action = playerInput.actions["Skill3"];
-        }
-    }
-    
-    private void OnEnable()
-    {
-        // 订阅输入事件
-        if (skill1Action != null) skill1Action.performed += OnSkill1;
-        if (skill2Action != null) skill2Action.performed += OnSkill2;
-        if (skill3Action != null) skill3Action.performed += OnSkill3;
-    }
-    
-    private void OnDisable()
-    {
-        // 取消订阅输入事件
-        if (skill1Action != null) skill1Action.performed -= OnSkill1;
-        if (skill2Action != null) skill2Action.performed -= OnSkill2;
-        if (skill3Action != null) skill3Action.performed -= OnSkill3;
     }
     
     private void Update()
@@ -274,26 +244,48 @@ public class CombatController : MonoBehaviour
     }
     
     /// <summary>
-    /// 技能1输入回调
+    /// 获取指定技能在装备槽中的索引
     /// </summary>
-    private void OnSkill1(InputAction.CallbackContext context)
+    /// <param name="skill">要查找的技能</param>
+    /// <returns>技能在装备槽中的索引，如果未找到则返回-1</returns>
+    public int GetSkillIndex(Skill skill)
     {
-        UseSkill(0);
+        if (skill == null)
+            return -1;
+            
+        // 检查是否是基础攻击
+        if (skill == basicAttack)
+            return -1; // 基础攻击不在技能槽中
+            
+        // 在装备槽中查找技能
+        for (int i = 0; i < equippedSkills.Length; i++)
+        {
+            if (equippedSkills[i] == skill)
+                return i;
+        }
+        
+        return -1; // 未找到技能
     }
     
     /// <summary>
-    /// 技能2输入回调
+    /// 获取装备在指定槽位的技能
     /// </summary>
-    private void OnSkill2(InputAction.CallbackContext context)
+    /// <param name="slotIndex">技能槽位索引</param>
+    /// <returns>装备的技能，如果槽位无效则返回null</returns>
+    public Skill GetEquippedSkill(int slotIndex)
     {
-        UseSkill(1);
+        if (slotIndex < 0 || slotIndex >= equippedSkills.Length)
+            return null;
+            
+        return equippedSkills[slotIndex];
     }
     
     /// <summary>
-    /// 技能3输入回调
+    /// 获取基础攻击技能
     /// </summary>
-    private void OnSkill3(InputAction.CallbackContext context)
+    /// <returns>基础攻击技能</returns>
+    public Skill GetBasicAttack()
     {
-        UseSkill(2);
+        return basicAttack;
     }
 } 

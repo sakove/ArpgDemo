@@ -1,11 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using System.Collections;
 
 /// <summary>
 /// 玩家控制器，负责处理玩家的基本移动和输入。
-/// 该类既可以作为直接的输入处理器，也可以作为事件监听者，
-/// 具体行为由 `useEventBasedInput` 字段决定。
+/// 该类作为事件监听者，接收来自InputManager的输入事件。
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour, IDamageable
@@ -47,11 +45,11 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private int maxHealth = 100;
     [Tooltip("玩家受伤后的无敌时间（秒）")]
     [SerializeField] private float invincibilityTime = 1f;
+
     
     // --- 组件引用 ---
     private Rigidbody2D rb;                     // 物理刚体组件
     private Animator animator;                  // 动画控制器组件
-    private PlayerInput playerInput;            // Unity输入系统组件
     private PlayerStateMachine stateMachine;    // 玩家状态机
     private CombatController combatController;  // 战斗控制器
     
@@ -74,11 +72,13 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool jumpHeld;                      // 跳跃键是否被按住
     private bool attackInput;                   // 攻击键是否被按下
     private bool sprintInput;                   // 冲刺键是否被按下
-    
-    // --- 输入系统选择 ---
-    [Header("输入系统")]
-    [Tooltip("如果为true，将使用事件驱动的输入系统。需要确保InputManager在场景中。")]
-    [SerializeField] private bool useEventBasedInput = true;
+    private bool skill1Input;                   // 技能1键是否被按下
+    private bool skill2Input;                   // 技能2键是否被按下
+    private bool skill3Input;                   // 技能3键是否被按下
+    private bool skill4Input;                   // 技能4键是否被按下
+    private bool skill5Input;                   // 技能5键是否被按下
+    private bool skill6Input;                   // 技能6键是否被按下
+    private bool skill7Input;                   // 技能7键是否被按下
     
     // --- 公开属性（供状态机等外部脚本访问） ---
     
@@ -97,6 +97,20 @@ public class PlayerController : MonoBehaviour, IDamageable
     public bool AttackInput => attackInput;
     /// <summary> 冲刺键是否被按下 </summary>
     public bool SprintInput => sprintInput;
+    /// <summary> 技能1键是否被按下 </summary>
+    public bool Skill1Input => skill1Input;
+    /// <summary> 技能2键是否被按下 </summary>
+    public bool Skill2Input => skill2Input;
+    /// <summary> 技能3键是否被按下 </summary>
+    public bool Skill3Input => skill3Input;
+    /// <summary> 技能4键是否被按下 </summary>
+    public bool Skill4Input => skill4Input;
+    /// <summary> 技能5键是否被按下 </summary>
+    public bool Skill5Input => skill5Input;
+    /// <summary> 技能6键是否被按下 </summary>
+    public bool Skill6Input => skill6Input;
+    /// <summary> 技能7键是否被按下 </summary>
+    public bool Skill7Input => skill7Input;
     /// <summary> 当前是否可以冲刺（冷却时间是否结束） </summary>
     public bool CanSprint => sprintCooldownCounter <= 0f;
     /// <summary> 冲刺的持续时间 </summary>
@@ -111,7 +125,6 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 获取组件
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-        playerInput = GetComponent<PlayerInput>();
         
         // 尝试获取状态机和战斗控制器（可能尚未添加）
         stateMachine = GetComponent<PlayerStateMachine>();
@@ -138,20 +151,12 @@ public class PlayerController : MonoBehaviour, IDamageable
     
     private void OnEnable()
     {
-        // 根据选择的输入系统订阅事件
-        if (useEventBasedInput)
-        {
-            SubscribeToInputEvents();
-        }
+        SubscribeToInputEvents();
     }
     
     private void OnDisable()
     {
-        // 根据选择的输入系统取消订阅事件
-        if (useEventBasedInput)
-        {
-            UnsubscribeFromInputEvents();
-        }
+        UnsubscribeFromInputEvents();
     }
     
     private void SubscribeToInputEvents()
@@ -162,10 +167,9 @@ public class PlayerController : MonoBehaviour, IDamageable
         {
             if (listener.eventSO == null) continue;
 
-            // 尝试将事件SO转换为InputEventSO以访问其类型
             if (listener.eventSO is InputEventSO inputEvent)
             {
-                // 根据事件类型订阅不同的回调
+                // 使用InputEventType枚举进行比较，而不是对象引用比较
                 switch (inputEvent.inputType)
                 {
                     case InputEventType.Move:
@@ -182,7 +186,27 @@ public class PlayerController : MonoBehaviour, IDamageable
                     case InputEventType.Attack:
                         listener.AddPressedListener(OnAttackEventPressed);
                         break;
-                    // 其他类型的输入可以在这里扩展
+                    case InputEventType.Skill1:
+                        listener.AddPressedListener(OnSkill1Pressed);
+                        break;
+                    case InputEventType.Skill2:
+                        listener.AddPressedListener(OnSkill2Pressed);
+                        break;
+                    case InputEventType.Skill3:
+                        listener.AddPressedListener(OnSkill3Pressed);
+                        break;
+                    case InputEventType.Skill4:
+                        listener.AddPressedListener(OnSkill4Pressed);
+                        break;
+                    case InputEventType.Skill5:
+                        listener.AddPressedListener(OnSkill5Pressed);
+                        break;
+                    case InputEventType.Skill6:
+                        listener.AddPressedListener(OnSkill6Pressed);
+                        break;
+                    case InputEventType.Skill7:
+                        listener.AddPressedListener(OnSkill7Pressed);
+                        break;
                 }
             }
         }
@@ -228,11 +252,44 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         sprintInput = false;
     }
+
+    private void OnSkill1Pressed(InputEventData data)
+    {
+        skill1Input = true;
+    }
+
+    private void OnSkill2Pressed(InputEventData data)
+    {
+        skill2Input = true;
+    }
+
+    private void OnSkill3Pressed(InputEventData data)
+    {
+        skill3Input = true;
+    }
+
+    private void OnSkill4Pressed(InputEventData data)
+    {
+        skill4Input = true;
+    }
+
+    private void OnSkill5Pressed(InputEventData data)
+    {
+        skill5Input = true;
+    }
+
+    private void OnSkill6Pressed(InputEventData data)
+    {
+        skill6Input = true;
+    }
+
+    private void OnSkill7Pressed(InputEventData data)
+    {
+        skill7Input = true;
+    }
     
     private void Update()
     {
-        // 使用事件系统时，moveInput已经通过事件更新，无需在此读取
-        
         // 检查是否接触地面
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         
@@ -274,6 +331,13 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 重置输入状态
         attackInput = false;
         sprintInput = false;
+        skill1Input = false;
+        skill2Input = false;
+        skill3Input = false;
+        skill4Input = false;
+        skill5Input = false;
+        skill6Input = false;
+        skill7Input = false;
     }
     
     /// <summary>
@@ -364,14 +428,14 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void ApplyFallMultiplier()
     {
-        // 核心改动：优化跳跃手感，消除最高点附近的“漂浮感”。
+        // 核心改动：优化跳跃手感，消除最高点附近的"漂浮感"。
         // 只要角色速度向量向下（即正在下落），就施加一个额外的重力倍率。
         if (rb.linearVelocity.y < 0)
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
         }
         // 如果角色正在上升，并且玩家已经松开了跳跃键，则施加另一个重力倍率。
-        // 这会让角色更快地停止上升，从而实现“小跳”。
+        // 这会让角色更快地停止上升，从而实现"小跳"。
         else if (rb.linearVelocity.y > 0 && !jumpHeld)
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
@@ -418,11 +482,31 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (!CanFlip) return;
 
         isFacingRight = !isFacingRight;
-        Vector3 theScale = transform.localScale;
-        theScale.x *= -1;
-        transform.localScale = theScale;
+        
+        // 使用旋转而不是缩放来翻转角色
+        transform.rotation = Quaternion.Euler(0, isFacingRight ? 0 : 180, 0);
+        
+        // 注意：如果你的角色有子对象需要保持原来的朝向（如UI元素），
+        // 你可能需要单独处理它们
     }
-    
+
+    /// <summary>
+    /// 设置角色朝向
+    /// </summary>
+    /// <param name="facingRight">是否朝向右边</param>
+    public void SetFacingRight(bool facingRight)
+    {
+        if (isFacingRight != facingRight)
+        {
+            isFacingRight = facingRight;
+            // 不在这里调用 Flip()，因为调用者可能已经设置了旋转
+        }
+        else
+        {
+            isFacingRight = facingRight;
+        }
+    }
+
     #region IDamageable Implementation
     
     public void TakeDamage(int damage)
@@ -468,9 +552,6 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 播放死亡动画和音效
         animator?.SetTrigger("Die");
         // AudioManager.Instance?.PlaySound("PlayerDeath");
-        
-        // 禁用玩家输入
-        playerInput.enabled = false;
         
         // 禁用物理
         rb.linearVelocity = Vector2.zero;

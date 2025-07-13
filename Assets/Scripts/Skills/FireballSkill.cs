@@ -12,10 +12,7 @@ public class FireballSkill : Skill
     
     public FireballSkill()
     {
-        // 使用参数控制类型
-        animationControlType = AnimationControlType.Parameter;
-        // 设置技能ID为1（在Animator中对应火球技能）
-        skillID = 1;
+        // 注意：现在我们使用动画覆盖方式，需要在Inspector中设置skillAnimation
     }
     
     public override void Activate(GameObject user)

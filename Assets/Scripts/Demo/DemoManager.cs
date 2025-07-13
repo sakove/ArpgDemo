@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class DemoManager : MonoBehaviour
 {
@@ -76,9 +75,10 @@ public class DemoManager : MonoBehaviour
             collider.size = new Vector2(1f, 2f);
         }
         
-        if (player.GetComponent<PlayerInput>() == null)
+        // 确保有输入事件监听器
+        if (player.GetComponent<InputEventListener>() == null)
         {
-            player.AddComponent<PlayerInput>();
+            player.AddComponent<InputEventListener>();
         }
     }
     

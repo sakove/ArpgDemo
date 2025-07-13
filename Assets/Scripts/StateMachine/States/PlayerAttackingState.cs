@@ -63,7 +63,7 @@ public class PlayerAttackingState : PlayerState
         
         // 重置动画参数（如果需要）
         animator?.ResetTrigger("Attack"); // 重置攻击触发器
-        animator?.ResetTrigger("Skill"); // 重置技能触发器
+        // 不再重置"Skill"触发器，因为我们现在只使用"UseSkill"触发器
         animator?.SetBool("IsAttacking", false);
     }
     
