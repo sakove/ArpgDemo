@@ -20,7 +20,6 @@ MonoBehaviour:
   canMoveWhileUsing: 0
   movementSpeedModifier: 0.5
   skillAnimation: {fileID: 0}
-  animationTriggerName: Skill
   skillSound: {fileID: 0}
   volume: 1
   visualEffect: {fileID: 0}

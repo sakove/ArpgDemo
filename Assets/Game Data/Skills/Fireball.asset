@@ -19,10 +19,7 @@ MonoBehaviour:
   skillDuration: 0.5
   canMoveWhileUsing: 0
   movementSpeedModifier: 0.5
-  animationControlType: 1
-  skillAnimation: {fileID: 0}
-  animationTriggerName: Skill
-  skillID: 1
+  skillAnimation: {fileID: 7400000, guid: da352f3aee375304d963be714faa8ff2, type: 2}
   skillSound: {fileID: 0}
   volume: 1
   visualEffect: {fileID: 0}
