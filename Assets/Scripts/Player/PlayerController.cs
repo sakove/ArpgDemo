@@ -45,7 +45,12 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private int maxHealth = 100;
     [Tooltip("玩家受伤后的无敌时间（秒）")]
     [SerializeField] private float invincibilityTime = 1f;
-
+    
+    [Header("动画层设置")]
+    [Tooltip("战斗层的索引")]
+    [SerializeField] private int combatLayerIndex = 1;
+    [Tooltip("交互层的索引")]
+    [SerializeField] private int interactionLayerIndex = 2;
     
     // --- 组件引用 ---
     private Rigidbody2D rb;                     // 物理刚体组件
@@ -59,7 +64,6 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool isFacingRight = true;          // 玩家当前是否朝向右边
     private float coyoteTimeCounter;            // 土狼时间的计时器
     private float jumpBufferCounter;            // 跳跃缓冲的计时器
-    private bool isSprinting;                   // 玩家当前是否正在冲刺
     private float sprintCooldownCounter;        // 冲刺冷却时间的计时器
     
     // --- 健康状态变量 ---
@@ -87,6 +91,13 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     /// <summary> 玩家当前是否在地面上 </summary>
     public bool IsGrounded => isGrounded;
+
+    /// <summary> 水平移动输入值 (-1 到 1) </summary>
+    public float HorizontalInput => moveInput.x;
+
+    /// <summary> 垂直移动输入值 (-1 到 1) </summary>
+    public float VerticalInput => moveInput.y;
+
     /// <summary> 土狼时间的剩余时间 </summary>
     public float CoyoteTimeCounter => coyoteTimeCounter;
     /// <summary> 跳跃键是否被按下 </summary>
@@ -119,6 +130,10 @@ public class PlayerController : MonoBehaviour, IDamageable
     public bool IsFacingRight => isFacingRight;
     /// <summary> 空中控制能力系数 </summary>
     public float AirControlFactor => airControlFactor;
+    /// <summary> 战斗层的索引 </summary>
+    public int CombatLayerIndex => combatLayerIndex;
+    /// <summary> 交互层的索引 </summary>
+    public int InteractionLayerIndex => interactionLayerIndex;
     
     private void Awake()
     {
@@ -290,39 +305,31 @@ public class PlayerController : MonoBehaviour, IDamageable
     
     private void Update()
     {
-        // 检查是否接触地面
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-        
-        // 处理土狼时间
-        if (isGrounded)
-        {
-            coyoteTimeCounter = coyoteTime;
-        }
-        else
-        {
-            coyoteTimeCounter -= Time.deltaTime;
-        }
-        
-        // 处理跳跃缓冲
-        if (jumpBufferCounter > 0)
-        {
-            jumpBufferCounter -= Time.deltaTime;
-        }
-        
-        // 处理冲刺冷却
-        if (sprintCooldownCounter > 0)
-        {
-            sprintCooldownCounter -= Time.deltaTime;
-        }
-        
-        // 处理无敌时间
+        // 计时器更新
+        coyoteTimeCounter -= Time.deltaTime;
+        jumpBufferCounter -= Time.deltaTime;
+        sprintCooldownCounter -= Time.deltaTime;
         if (isInvincible)
         {
             invincibilityCounter -= Time.deltaTime;
-            if (invincibilityCounter <= 0)
+            if (invincibilityCounter <= 0f)
             {
                 isInvincible = false;
             }
+        }
+        
+        // 地面检测
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        if (isGrounded && rb.linearVelocity.y < 0.01f)
+        {
+            ResetCoyoteTime();
+        }
+
+        // 核心改动：在每一帧将玩家的输入和物理状态传递给Animator
+        if (animator != null)
+        {
+            // 更新垂直输入，用于判断定向攻击
+            animator.SetFloat("VerticalInput", moveInput.y);
         }
         
         // 处理朝向
@@ -394,9 +401,6 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// <param name="direction">冲刺方向</param>
     public void PerformSprint(Vector2 direction)
     {
-        if (isSprinting) return;
-
-        isSprinting = true;
         rb.linearVelocity = direction.normalized * sprintSpeed;
         
         // 可以在这里添加冲刺开始的音效或特效
@@ -406,7 +410,6 @@ public class PlayerController : MonoBehaviour, IDamageable
     
     public void EndSprint()
     {
-        isSprinting = false;
         // 可以在这里添加冲刺结束的逻辑
     }
     
@@ -414,7 +417,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         rb.linearVelocity = direction.normalized * sprintSpeed;
     }
-
+    
     /// <summary>
     /// 开始冲刺技能冷却
     /// </summary>
@@ -504,47 +507,81 @@ public class PlayerController : MonoBehaviour, IDamageable
         else
         {
             isFacingRight = facingRight;
-        }
     }
-
+    }
+    
     #region IDamageable Implementation
     
+    /// <summary>
+    /// 玩家受到伤害
+    /// </summary>
+    /// <param name="damage">伤害值</param>
     public void TakeDamage(int damage)
     {
-        // 如果处于无敌状态，忽略伤害
+        // 如果处于无敌状态，不受伤害
         if (isInvincible)
             return;
             
         // 应用伤害
         currentHealth -= damage;
         
-        // 检查生命值
+        // 确保生命值不会小于0
+        currentHealth = Mathf.Max(0, currentHealth);
+        
+        // 调试输出
+        Debug.Log($"Player took {damage} damage. Current health: {currentHealth}");
+        
+        // 触发受伤效果
+        OnTakeDamage();
+        
+        // 检查是否死亡
         if (currentHealth <= 0)
         {
-            // 处理死亡
             Die();
         }
         else
         {
-            // 进入无敌状态
+            // 设置无敌状态
             isInvincible = true;
             invincibilityCounter = invincibilityTime;
-            
-            // 播放受伤动画和音效
-            animator?.SetTrigger("Hit");
-            // AudioManager.Instance?.PlaySound("PlayerHit");
-            
-            // 相机震动（如果有CameraShake组件）
-            if (FindObjectOfType<CameraShake>() != null)
-            {
-                FindObjectOfType<CameraShake>().ShakeCamera(0.2f, 0.3f);
-            }
         }
     }
     
+    /// <summary>
+    /// 玩家受到伤害时的额外效果
+    /// </summary>
+    private void OnTakeDamage()
+    {
+        // 可以在这里添加受伤动画、音效等
+        if (animator != null)
+        {
+            animator.SetTrigger("Hit");
+        }
+    }
+    
+    /// <summary>
+    /// 检查玩家是否可以受到伤害
+    /// </summary>
+    /// <returns>如果可以受到伤害，则返回true</returns>
     public bool CanBeDamaged()
     {
         return !isInvincible;
+    }
+    
+    /// <summary>
+    /// 恢复生命值
+    /// </summary>
+    /// <param name="amount">恢复的生命值数量</param>
+    public void Heal(float amount)
+    {
+        // 应用恢复
+        currentHealth += Mathf.RoundToInt(amount);
+        
+        // 确保生命值不会超过最大值
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        
+        // 调试输出
+        Debug.Log($"Player healed {amount} health. Current health: {currentHealth}");
     }
     
     private void Die()
@@ -576,6 +613,115 @@ public class PlayerController : MonoBehaviour, IDamageable
         {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+        }
+    }
+
+    /// <summary>
+    /// 设置战斗动画层的权重
+    /// </summary>
+    /// <param name="weight">权重值（0-1）</param>
+    public void SetCombatLayerWeight(float weight)
+    {
+        if (animator != null)
+        {
+            animator.SetLayerWeight(combatLayerIndex, Mathf.Clamp01(weight));
+        }
+    }
+
+    /// <summary>
+    /// 设置交互动画层的权重
+    /// </summary>
+    /// <param name="weight">权重值（0-1）</param>
+    public void SetInteractionLayerWeight(float weight)
+    {
+        if (animator != null)
+        {
+            animator.SetLayerWeight(interactionLayerIndex, Mathf.Clamp01(weight));
+        }
+    }
+    
+    /// <summary>
+    /// 触发跳跃动画
+    /// </summary>
+    public void TriggerJumpAnimation()
+    {
+        if (animator != null)
+        {
+            animator.SetTrigger("Jump");
+        }
+    }
+    
+    /// <summary>
+    /// 触发技能动画
+    /// </summary>
+    public void TriggerSkillAnimation()
+    {
+        if (animator != null)
+        {
+            animator.SetTrigger("UseSkill");
+        }
+    }
+    
+    /// <summary>
+    /// 触发特殊动画
+    /// </summary>
+    /// <param name="actionName">动作名称（如"Sleep"）</param>
+    public void TriggerSpecialAnimation(string actionName)
+    {
+        if (animator != null)
+        {
+            // 设置交互层权重为1
+            SetInteractionLayerWeight(1f);
+            
+            // 触发对应的动画
+            animator.SetTrigger(actionName);
+        }
+    }
+    
+    /// <summary>
+    /// 结束特殊动画
+    /// </summary>
+    public void EndSpecialAnimation()
+    {
+        if (animator != null)
+        {
+            // 设置交互层权重为0
+            SetInteractionLayerWeight(0f);
+        }
+    }
+
+    // --- 输入消耗方法 ---
+
+    /// <summary>
+    /// 消耗跳跃输入。状态机在执行跳跃后应调用此方法。
+    /// </summary>
+    public void UseJumpInput() => jumpInput = false;
+
+    /// <summary>
+    /// 消耗攻击输入。状态机在执行攻击后应调用此方法。
+    /// </summary>
+    public void UseAttackInput() => attackInput = false;
+    
+    /// <summary>
+    /// 消耗冲刺输入。
+    /// </summary>
+    public void UseSprintInput() => sprintInput = false;
+
+    /// <summary>
+    /// 消耗指定的技能输入。
+    /// </summary>
+    /// <param name="skillNumber">技能编号 (1-7)</param>
+    public void UseSkillInput(int skillNumber)
+    {
+        switch (skillNumber)
+        {
+            case 1: skill1Input = false; break;
+            case 2: skill2Input = false; break;
+            case 3: skill3Input = false; break;
+            case 4: skill4Input = false; break;
+            case 5: skill5Input = false; break;
+            case 6: skill6Input = false; break;
+            case 7: skill7Input = false; break;
         }
     }
 } 

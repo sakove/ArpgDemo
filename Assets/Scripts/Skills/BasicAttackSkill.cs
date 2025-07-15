@@ -16,11 +16,6 @@ public class BasicAttackSkill : Skill
     public Vector2 attackBoxSize = new Vector2(1.5f, 1f);
     public Vector2 attackBoxOffset = new Vector2(1f, 0f);
     
-    [Header("连击设置")]
-    public bool isPartOfCombo = false;
-    public int comboIndex = 0;
-    public float comboWindow = 0.5f; // 连击窗口时间
-    
     [Header("击退设置")]
     public bool causesKnockback = false;
     public float knockbackForce = 5f;
@@ -98,27 +93,11 @@ public class BasicAttackSkill : Skill
     
     public override bool CanUse(GameObject user)
     {
-        // 检查基本条件
-        if (!base.CanUse(user))
-            return false;
-            
-        // 如果是连击的一部分，需要检查连击条件
-        if (isPartOfCombo)
-        {
-            CombatController combatController = user.GetComponent<CombatController>();
-            if (combatController != null)
-            {
-                // 检查是否在连击窗口内且连击索引匹配
-                return combatController.CurrentComboIndex == comboIndex - 1 && 
-                       combatController.IsInComboWindow();
-            }
-            
-            // 如果没有战斗控制器但这是连击的一部分，则不能使用
-            return false;
-        }
-        
-        // 不是连击的一部分，可以直接使用
-        return true;
+        // 对于基础攻击，我们通常不需要额外的条件检查。
+        // 这个方法主要用于需要消耗资源（如法力值）或有其他前置条件的技能。
+        // 在我们当前的设计中，连击逻辑已经完全由CombatController处理，
+        // 所以这里不再需要进行连击相关的检查。
+        return base.CanUse(user);
     }
     
     // 在Unity编辑器中绘制攻击范围的Gizmo

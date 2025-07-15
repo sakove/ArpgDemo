@@ -20,6 +20,7 @@ public class PlayerStateMachine : MonoBehaviour
     public PlayerAttackingState AttackingState { get; private set; }
     public PlayerSprintingState SprintingState { get; private set; }
     public PlayerUsingSkillState UsingSkillState { get; private set; }
+    public PlayerSpecialAnimationState SpecialAnimationState { get; private set; }
     
     private void Awake()
     {
@@ -34,6 +35,7 @@ public class PlayerStateMachine : MonoBehaviour
         AttackingState = new PlayerAttackingState(this, playerController);
         SprintingState = new PlayerSprintingState(this, playerController);
         UsingSkillState = new PlayerUsingSkillState(this, playerController);
+        SpecialAnimationState = new PlayerSpecialAnimationState(this, playerController);
     }
     
     private void Start()
@@ -41,18 +43,15 @@ public class PlayerStateMachine : MonoBehaviour
         // 设置初始状态
         currentState = IdleState;
         currentState.Enter();
+        
+        // 确保交互层的初始权重为0
+        playerController.SetInteractionLayerWeight(0f);
     }
     
     private void Update()
     {
         // 更新当前状态的逻辑
         currentState?.LogicUpdate();
-        
-        // 持续将玩家的地面状态同步到Animator
-        if (animator != null)
-        {
-            animator.SetBool("IsGrounded", playerController.IsGrounded);
-        }
     }
     
     private void FixedUpdate()
@@ -106,6 +105,21 @@ public class PlayerStateMachine : MonoBehaviour
             // 如果不是技能使用状态，则使用普通的状态切换
             ChangeState(newState);
         }
+    }
+    
+    /// <summary>
+    /// 切换到特殊动画状态
+    /// </summary>
+    /// <param name="trigger">动画触发器名称</param>
+    /// <param name="duration">动画持续时间</param>
+    /// <param name="lockInput">是否锁定输入</param>
+    public void ChangeToSpecialAnimationState(string trigger, float duration, bool lockInput = true)
+    {
+        // 设置特殊动画参数
+        SpecialAnimationState.SetAnimationParameters(trigger, duration, lockInput);
+        
+        // 切换到特殊动画状态
+        ChangeState(SpecialAnimationState);
     }
     
     /// <summary>

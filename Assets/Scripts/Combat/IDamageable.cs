@@ -16,4 +16,10 @@ public interface IDamageable
     /// </summary>
     /// <returns>如果可以受到伤害，则返回true</returns>
     bool CanBeDamaged();
+    
+    /// <summary>
+    /// 恢复生命值
+    /// </summary>
+    /// <param name="amount">恢复的生命值数量</param>
+    void Heal(float amount);
 } 

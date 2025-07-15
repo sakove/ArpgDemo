@@ -1,91 +1,72 @@
-# 技能动画系统使用指南
+# 技能动画系统使用指南 (AnimationOverride 方案)
 
-本文档介绍如何在 Animator 中设置动画状态，以配合技能系统的三种动画控制方式。
+本文档介绍如何在 Animator 中进行设置，以配合当前项目统一使用的、基于 `AnimationOverrideController` 的技能动画系统。
 
-## 动画控制方式
+## 核心思想：动态覆盖，告别繁杂
 
-技能系统支持三种动画控制方式：
+本项目的技能系统**只使用一种动画控制方式：动画覆盖 (AnimationOverride)**。
 
-1. **触发器控制 (Trigger)**：使用命名的触发器来激活特定动画
-2. **参数控制 (Parameter)**：使用技能ID参数和通用触发器来激活动画
-3. **动画覆盖 (AnimationOverride)**：动态替换动画片段
+这种方式的核心是，在 Animator 中我们不为每一个具体技能（如火球、冲斩）创建单独的动画状态，而是只有一个名为 `"Skill"` 的**通用占位状态**。在代码中，当一个技能被激活时，我们会动态地将这个技能对应的动画片段（`AnimationClip`）“塞”到这个占位状态里去播放。
+
+**优点:**
+- **高度可扩展**: 添加新技能无需修改 Animator，避免其变得越来越臃肿、混乱。
+- **职责分离**: 动画师和设计师可以独立创建动画和技能，无需开发者介入修改状态机。
+- **维护简单**: Animator 结构保持极简，一目了然。
 
 ## Animator 设置指南
 
-### 1. 基本设置
+为了让该系统正常工作，你的 Animator Controller (例如 `Player.controller`) 中需要进行以下简单设置。
 
-在 Animator 中，需要添加以下参数：
+### 1. 所需参数 (Parameters)
 
-- `Attack` (Trigger)：基础攻击触发器
-- `UseSkill` (Trigger)：通用技能触发器
-- `SkillID` (Int)：技能ID参数
-- `IsAttacking` (Bool)：标记是否正在攻击
+在 Animator 窗口的 "Parameters" 标签页，请确保有以下参数：
 
-### 2. 状态机结构
+- `UseSkill` (Trigger): 一个通用的触发器，用于从任何状态转换到我们的技能占位状态。
+- `IsAttacking` (Bool): 用于标记角色是否处于攻击或技能状态，以控制状态转换。
 
-建议的状态机结构如下：
+> 注意：不再需要 `SkillID` 这个整数参数来控制动画了。
 
+### 2. 所需状态 (States)
+
+在 Animator 的基础层 (Base Layer) 中，你需要创建一个动画状态，并将其**精确命名为 `Skill`**。
+
+- **`Motion`**: 为这个状态随便指定一个动画片段作为**占位符**。这个动画本身不会被播放，它仅仅是作为被覆盖的目标。
+- **`Transitions`**:
+    - **进入过渡**: 创建一个从 `Any State` 到 `Skill` 状态的过渡。
+        - **Conditions**: `UseSkill`
+    - **退出过渡**: 创建一个从 `Skill` 到你的人物默认状态（如 `Idle` 或 `Movement` 混合树）的过渡。
+        - **Has Exit Time**: **勾选** (设置为 true)。
+        - **Exit Time**: 通常设置为 1，表示动画播放完毕后自动退出。
+
+**简化的状态机结构示例:**
 ```
 Base Layer
-├── Idle
-├── Run
+├── Movement (Blend Tree)
 ├── Jump
 ├── Fall
-├── Attack
-│   ├── Attack1
-│   ├── Attack2
-│   └── Attack3
-└── Skills
-    ├── Skill_Generic (由SkillID参数控制内部过渡)
-    │   ├── Fireball (SkillID = 1)
-    │   ├── IceSpear (SkillID = 2)
-    │   └── LightningBolt (SkillID = 3)
-    └── Skill_Override (使用动画覆盖)
+└── Skill  <-- 我们的通用技能占位状态
 ```
+(从 `Any State` 连线到 `Skill`, 条件是 `UseSkill` 触发器)
+(从 `Skill` 连线到 `Movement`, 条件是 `Exit Time`)
 
-### 3. 过渡设置
+## 如何添加一个带动画的新技能
 
-#### 从任何状态到攻击状态的过渡：
-- 条件：`Attack` 触发器
-- 可中断：根据游戏设计决定
+遵循这个系统，添加新技能的流程非常简单：
 
-#### 从任何状态到技能状态的过渡：
-- 条件：`UseSkill` 触发器
-- 可中断：根据游戏设计决定
+1.  **创建动画片段**: 制作你的技能动画，保存为 `.anim` 文件。
+2.  **创建技能资产**: 在 Project 窗口中，右键 `Create -> Skills -> [你的技能类型]` 来创建一个新的技能资产文件（`.asset`）。
+3.  **关联动画**: 选中你新创建的技能资产，在 Inspector 窗口中，找到 `Skill Animation` 字段，将你的 `.anim` 文件拖拽进去。
+4.  **完成!** 将这个技能资产分配到 `CombatController` 的技能槽中即可使用。完全不需要打开或修改 Animator Controller。
 
-#### 技能子状态机内部过渡：
-- 从入口到具体技能状态的条件：`SkillID` 等于特定值
-- 例如：到 Fireball 状态的条件是 `SkillID = 1`
+## 代码工作流（幕后英雄）
 
-### 4. 动画覆盖设置
+简单来说，代码层面会自动完成以下工作：
 
-对于使用动画覆盖的技能：
-
-1. 创建一个 AnimatorOverrideController 资源
-2. 将其基础控制器设置为角色的 AnimatorController
-3. 在覆盖列表中，添加一个名为 "Skill" 的动画片段
-4. 在运行时，技能系统会自动替换这个动画片段
-
-## 使用示例
-
-### 基础攻击（触发器方式）：
-```csharp
-// BasicAttackSkill 已配置为使用 "Attack" 触发器
-```
-
-### 火球技能（参数方式）：
-```csharp
-// FireballSkill 已配置为使用参数方式，SkillID = 1
-```
-
-### 冲斩技能（动画覆盖方式）：
-```csharp
-// DashSlashSkill 已配置为使用动画覆盖方式
-// 需要在Inspector中为其分配skillAnimation
-```
-
-## 注意事项
-
-1. 确保所有技能的动画持续时间与技能的 `skillDuration` 参数匹配
-2. 对于使用动画覆盖的技能，必须在Inspector中分配 `skillAnimation`
-3. 如果添加新的技能ID，记得在Animator中添加相应的状态和过渡条件 
+1.  玩家输入技能，`PlayerStateMachine` 进入 `PlayerUsingSkillState`。
+2.  `PlayerUsingSkillState` 调用当前技能的 `Activate()` 方法。
+3.  `skill.Activate()` 内部调用 `PlayAnimation()`。
+4.  `PlayAnimation()` 会：
+    a. 获取或创建 `AnimatorOverrideController`。
+    b. 将当前技能的 `skillAnimation` 字段里的动画片段，覆盖到 Animator 中名为 `"Skill"` 的动画片段上。
+    c. 触发 `UseSkill` 扳机。
+5.  Animator 响应触发器，进入 `Skill` 状态，此时播放的已经是被我们动态替换后的新动画了。 

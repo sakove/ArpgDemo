@@ -16,10 +16,17 @@ public class Skill : ScriptableObject
     public float skillDuration = 0.5f;
     public bool canMoveWhileUsing = false;
     public float movementSpeedModifier = 0.5f; // 使用技能时的移动速度修正
-    
+
+    [Header("连击扩展接口")]
+    [Tooltip("【未来扩展】如果这个技能是可连击的，这里可以指定连击中的下一个技能。")]
+    [ContextMenuItem("Clear Next Skill", "ClearNextSkillInCombo")]
+    public Skill nextSkillInCombo;
+
     [Header("动画设置")]
     [Tooltip("技能动画片段，用于覆盖默认动画")]
     public AnimationClip skillAnimation;
+    [Tooltip("是否为特殊动画（如面向摄像机的动画，将使用交互层）")]
+    public bool isSpecialAnimation = false;
     
     [Header("音效设置")]
     public AudioClip skillSound;
@@ -28,7 +35,21 @@ public class Skill : ScriptableObject
     [Header("视觉效果")]
     public GameObject visualEffect;
     public Vector3 effectOffset = Vector3.zero;
-    
+
+    [Header("物理行为覆盖")]
+    [Tooltip("是否在地面攻击时清除玩家的水平惯性，实现“原地急停”效果。")]
+    public bool haltMomentumOnGround = true;
+
+    [Tooltip("是否在空中攻击时减缓玩家的动量，实现“空中停滞”效果。")]
+    public bool stallInAir = true;
+
+    [Tooltip("【仅当Stall In Air为true时】在空中停滞时的垂直速度。可以为负数（缓慢下落）或正数（轻微上浮）。")]
+    public float airStallVerticalVelocity = -2f;
+
+    [Tooltip("【仅当Stall In Air为true时】在空中停滞时，玩家的水平控制力削减系数（0为无控制，1为完全控制）。")]
+    [Range(0f, 1f)]
+    public float airStallControlDampening = 0.5f;
+
     /// <summary>
     /// 激活技能
     /// </summary>
@@ -117,5 +138,13 @@ public class Skill : ScriptableObject
             // 重置通用技能触发器
             animator.ResetTrigger("UseSkill");
         }
+    }
+
+    /// <summary>
+    /// 上下文菜单方法，用于在Inspector中快速清除下一个连击技能的引用。
+    /// </summary>
+    private void ClearNextSkillInCombo()
+    {
+        nextSkillInCombo = null;
     }
 } 

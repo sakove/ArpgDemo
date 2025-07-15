@@ -15,7 +15,6 @@ public class PlayerMovingState : PlayerState
         base.Enter();
         
         // 播放移动动画或设置动画参数
-        animator?.SetBool("IsMoving", true);
         animator?.SetFloat("VerticalSpeed", 0f); // 确保在地面时垂直速度为0
     }
     
@@ -24,7 +23,6 @@ public class PlayerMovingState : PlayerState
         base.Exit();
         
         // 重置动画参数
-        animator?.SetBool("IsMoving", false);
     }
     
     public override void LogicUpdate()
@@ -34,89 +32,31 @@ public class PlayerMovingState : PlayerState
         // 更新动画参数
         animator?.SetFloat("Speed", Mathf.Abs(playerController.GetMoveInput().x));
 
-        // 检查是否停止移动
+        // 1. 优先检查状态特有的转换：停止移动
         if (playerController.GetMoveInput().x == 0)
         {
             stateMachine.ChangeState(stateMachine.IdleState);
+            return; // 状态已切换，结束本次更新
         }
-        // 检查跳跃输入
-        else if (playerController.JumpInput)
+        
+        // 2. 检查地面专属动作：跳跃
+        if (playerController.JumpInput)
         {
+            playerController.UseJumpInput();
             stateMachine.ChangeState(stateMachine.JumpingState);
+            return; // 状态已切换，结束本次更新
         }
-        // 检查攻击输入
-        else if (playerController.AttackInput)
+        
+        // 3. 检查地面专属动作：冲刺
+        if (playerController.SprintInput && playerController.CanSprint)
         {
-            stateMachine.ChangeState(stateMachine.AttackingState);
-        }
-        // 检查冲刺输入
-        else if (playerController.SprintInput && playerController.CanSprint)
-        {
+            playerController.UseSprintInput();
             stateMachine.ChangeState(stateMachine.SprintingState);
+            return; // 状态已切换，结束本次更新
         }
-        // 检查技能1输入
-        else if (playerController.Skill1Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(0);
-            if (skill != null && combatController.CanUseSkill(0))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能2输入
-        else if (playerController.Skill2Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(1);
-            if (skill != null && combatController.CanUseSkill(1))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能3输入
-        else if (playerController.Skill3Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(2);
-            if (skill != null && combatController.CanUseSkill(2))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能4输入
-        else if (playerController.Skill4Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(3);
-            if (skill != null && combatController.CanUseSkill(3))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能5输入
-        else if (playerController.Skill5Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(4);
-            if (skill != null && combatController.CanUseSkill(4))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能6输入
-        else if (playerController.Skill6Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(5);
-            if (skill != null && combatController.CanUseSkill(5))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
-        // 检查技能7输入
-        else if (playerController.Skill7Input && combatController != null)
-        {
-            Skill skill = combatController.GetEquippedSkill(6);
-            if (skill != null && combatController.CanUseSkill(6))
-            {
-                stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
-            }
-        }
+
+        // 4. 如果以上都不是，则调用基类的方法检查通用的攻击/技能动作
+        CheckForAttackAndSkillInputs();
     }
     
     public override void PhysicsUpdate()

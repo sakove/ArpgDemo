@@ -15,7 +15,6 @@ public class PlayerFallingState : PlayerState
         base.Enter();
         
         // 设置动画参数
-        animator?.SetBool("IsFalling", true);
         animator?.SetBool("IsGrounded", false);
     }
     
@@ -24,7 +23,6 @@ public class PlayerFallingState : PlayerState
         base.Exit();
         
         // 重置动画参数
-        animator?.SetBool("IsFalling", false);
     }
     
     public override void LogicUpdate()
@@ -60,6 +58,7 @@ public class PlayerFallingState : PlayerState
         // 检查是否按下攻击键（允许空中攻击）
         if (playerController.AttackInput)
         {
+            playerController.UseAttackInput(); // <<-- 消耗攻击输入
             stateMachine.ChangeState(stateMachine.AttackingState);
             return;
         }
@@ -67,6 +66,7 @@ public class PlayerFallingState : PlayerState
         // 允许在空中冲刺
         if (playerController.SprintInput && playerController.CanSprint)
         {
+            playerController.UseSprintInput(); // <<-- 消耗冲刺输入
             stateMachine.ChangeState(stateMachine.SprintingState);
             return;
         }
@@ -77,6 +77,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(0);
             if (skill != null && combatController.CanUseSkill(0))
             {
+                playerController.UseSkillInput(1); // <<-- 消耗技能1输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
                 return;
             }
@@ -88,6 +89,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(1);
             if (skill != null && combatController.CanUseSkill(1))
             {
+                playerController.UseSkillInput(2); // <<-- 消耗技能2输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
                 return;
             }
@@ -99,6 +101,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(2);
             if (skill != null && combatController.CanUseSkill(2))
             {
+                playerController.UseSkillInput(3); // <<-- 消耗技能3输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
                 return;
             }
@@ -109,6 +112,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(3);
             if (skill != null && combatController.CanUseSkill(3))
             {
+                playerController.UseSkillInput(4); // <<-- 消耗技能4输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
             }
         }
@@ -118,6 +122,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(4);
             if (skill != null && combatController.CanUseSkill(4))
             {
+                playerController.UseSkillInput(5); // <<-- 消耗技能5输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
             }
         }
@@ -127,6 +132,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(5);
             if (skill != null && combatController.CanUseSkill(5))
             {
+                playerController.UseSkillInput(6); // <<-- 消耗技能6输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
             }
         }
@@ -136,6 +142,7 @@ public class PlayerFallingState : PlayerState
             Skill skill = combatController.GetEquippedSkill(6);
             if (skill != null && combatController.CanUseSkill(6))
             {
+                playerController.UseSkillInput(7); // <<-- 消耗技能7输入
                 stateMachine.ChangeState(stateMachine.UsingSkillState, skill);
             }
         }

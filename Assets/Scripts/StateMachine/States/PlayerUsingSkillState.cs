@@ -47,7 +47,7 @@ public class PlayerUsingSkillState : PlayerState
         // 根据技能设置是否可以转向
         playerController.CanFlip = activeSkill.canMoveWhileUsing;
         
-        // 保存原始的动画控制器
+        // 保存原始的动画控制器（如果需要）
         if (animator != null && animator.runtimeAnimatorController is AnimatorOverrideController)
         {
             originalOverrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
@@ -75,37 +75,83 @@ public class PlayerUsingSkillState : PlayerState
             activeSkill.Activate(playerController.gameObject);
         }
         
-        // 设置动画参数 - 移到技能激活之后
+        // 设置动画 - 使用分层动画系统
         if (animator != null)
         {
-            animator.SetBool("IsUsingSkill", true);
-            
-            // 使用动画覆盖方式播放技能动画
-            if (activeSkill.skillAnimation != null)
+            // 判断技能类型，决定使用哪个动画层
+            if (activeSkill.isSpecialAnimation)
             {
-                // 创建一个新的覆盖控制器或使用现有的
-                AnimatorOverrideController overrideController;
-                
-                if (animator.runtimeAnimatorController is AnimatorOverrideController)
-                {
-                    overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
-                }
-                else
-                {
-                    overrideController = new AnimatorOverrideController(animator.runtimeAnimatorController);
-                    animator.runtimeAnimatorController = overrideController;
-                }
-                
-                // 覆盖"Skill"动画片段
-                overrideController["Skill"] = activeSkill.skillAnimation;
-                
-                // 触发技能动画
-                animator.SetTrigger("UseSkill");
+                // 特殊动画使用交互层
+                SetupSpecialAnimation();
             }
             else
             {
-                Debug.LogWarning($"技能 {activeSkill.skillName} 没有提供动画片段！");
+                // 普通技能使用战斗层
+                SetupCombatAnimation();
             }
+        }
+    }
+    
+    private void SetupCombatAnimation()
+    {
+        // 确保战斗层权重为1
+        playerController.SetCombatLayerWeight(1f);
+        
+        // 使用动画覆盖方式播放技能动画
+        if (activeSkill.skillAnimation != null)
+        {
+            // 创建一个新的覆盖控制器或使用现有的
+            AnimatorOverrideController overrideController;
+            
+            if (animator.runtimeAnimatorController is AnimatorOverrideController)
+            {
+                overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+            }
+            else
+            {
+                overrideController = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                animator.runtimeAnimatorController = overrideController;
+            }
+            
+            // 覆盖"Skill"动画片段
+            overrideController["Skill"] = activeSkill.skillAnimation;
+            
+            // 触发技能动画
+            playerController.TriggerSkillAnimation();
+        }
+        else
+        {
+            Debug.LogWarning($"技能 {activeSkill.skillName} 没有提供动画片段！");
+        }
+    }
+    
+    private void SetupSpecialAnimation()
+    {
+        // 使用交互层播放特殊动画
+        if (activeSkill.skillAnimation != null)
+        {
+            // 创建一个新的覆盖控制器或使用现有的
+            AnimatorOverrideController overrideController;
+            
+            if (animator.runtimeAnimatorController is AnimatorOverrideController)
+            {
+                overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+            }
+            else
+            {
+                overrideController = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                animator.runtimeAnimatorController = overrideController;
+            }
+            
+            // 覆盖"Special"动画片段
+            overrideController["Special"] = activeSkill.skillAnimation;
+            
+            // 触发特殊动画
+            playerController.TriggerSpecialAnimation("SpecialAction");
+        }
+        else
+        {
+            Debug.LogWarning($"特殊技能 {activeSkill.skillName} 没有提供动画片段！");
         }
     }
     
@@ -113,17 +159,10 @@ public class PlayerUsingSkillState : PlayerState
     {
         base.Exit();
         
-        // 重置动画参数
-        if (animator != null)
+        // 如果是特殊动画，结束交互层动画
+        if (activeSkill != null && activeSkill.isSpecialAnimation)
         {
-            animator.SetBool("IsUsingSkill", false);
-            animator.ResetTrigger("UseSkill");
-            
-            // 恢复原始的动画控制器（如果有）
-            if (originalOverrideController != null)
-            {
-                animator.runtimeAnimatorController = originalOverrideController;
-            }
+            playerController.EndSpecialAnimation();
         }
         
         // 恢复玩家的转向能力

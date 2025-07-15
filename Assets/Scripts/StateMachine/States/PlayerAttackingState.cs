@@ -6,52 +6,118 @@ public class PlayerAttackingState : PlayerState
     private float attackDuration;
     private bool attackFinished;
     private CombatController combatController;
+    private AnimationStateHelper stateHelper;
+    private Vector2 inputAtStart; // 记录进入状态时的输入向量
     
+    // 核心改动：缓存当前正在执行的攻击Skill，以便在整个状态中访问其配置
+    private Skill activeAttack;
+
     public PlayerAttackingState(PlayerStateMachine stateMachine, PlayerController playerController) 
         : base(stateMachine, playerController)
     {
         combatController = playerController.GetComponent<CombatController>();
+        stateHelper = playerController.GetComponent<AnimationStateHelper>();
+        
         if (combatController == null)
         {
             Debug.LogError("PlayerAttackingState: CombatController is not found on the player object!");
+        }
+        
+        if (stateHelper == null)
+        {
+            Debug.LogWarning("PlayerAttackingState: AnimationStateHelper is not found on the player object. Combined attack animations might not work correctly.");
         }
     }
     
     public override void Enter()
     {
         base.Enter();
-
+        
         // 核心改动：进入攻击状态时，禁止玩家转向，以确保攻击动作的稳定性。
         playerController.CanFlip = false;
         
         // 设置攻击开始时间
         attackStartTime = Time.time;
         
-        // 获取当前攻击的持续时间
-        if (combatController != null)
+        // 记录当前的输入向量，用于决定攻击类型
+        inputAtStart = playerController.GetMoveInput();
+        
+        // 执行攻击，获取持续时间，并缓存当前的攻击Skill
+        attackDuration = PerformAppropriateAttack(out activeAttack);
+        
+        // 根据当前攻击的配置，决定是否清除水平速度
+        if (playerController.IsGrounded && activeAttack != null && activeAttack.haltMomentumOnGround)
         {
-            attackDuration = combatController.GetCurrentAttackDuration();
-        }
-        else
-        {
-            // 如果没有CombatController，提供一个默认的短时间，并标记攻击立即完成，以避免卡死
-            attackDuration = 0.1f;
-            attackFinished = true;
-            return; // 提前退出Enter方法，因为没有CombatController无法继续
+            // 实现“原地急停攻击”
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         }
         
         // 重置攻击完成标志
         attackFinished = false;
         
-        // 执行攻击
-        if (combatController != null)
+        // 确保战斗层权重为1
+        playerController.SetCombatLayerWeight(1f);
+    }
+    
+    private float PerformAppropriateAttack(out Skill performedAttack)
+    {
+        performedAttack = null;
+        if (combatController == null)
         {
-            combatController.PerformAttack();
+            return 0.1f; // 默认短持续时间
         }
         
-        // 设置动画参数
-        animator?.SetTrigger("Attack"); // 如果你仍想用触发器立即响应，可以保留
-        animator?.SetBool("IsAttacking", true);
+        // 获取当前的移动状态
+        AnimationStateHelper.MovementState currentState = AnimationStateHelper.MovementState.Idle;
+        if (stateHelper != null)
+        {
+            currentState = stateHelper.GetCurrentMovementState();
+        }
+        
+        // 根据当前状态和输入决定使用哪种攻击
+        if (playerController.IsGrounded)
+        {
+            // 地面攻击
+            float verticalInput = inputAtStart.y;
+
+            if (verticalInput > 0.5f)
+            {
+                // 地面向上攻击
+                return combatController.PerformUpGroundAttack(out performedAttack);
+            }
+            else if (verticalInput < -0.5f)
+            {
+                // 地面向下攻击
+                return combatController.PerformDownGroundAttack(out performedAttack);
+            }
+            else
+            {
+                // 地面普通攻击
+                bool isMoving = currentState == AnimationStateHelper.MovementState.Moving;
+                return combatController.PerformGroundAttack(isMoving, out performedAttack);
+            }
+        }
+        else
+        {
+            // 空中攻击 - 根据垂直输入决定攻击类型
+            float verticalInput = inputAtStart.y;
+            
+            if (verticalInput > 0.5f)
+            {
+                // 空中向上攻击
+                return combatController.PerformUpAirAttack(out performedAttack);
+            }
+            else if (verticalInput < -0.5f)
+            {
+                // 空中向下攻击
+                return combatController.PerformDownAirAttack(out performedAttack);
+            }
+            else
+            {
+                // 普通空中攻击
+                return combatController.PerformAirAttack(out performedAttack);
+            }
+        }
     }
     
     public override void Exit()
@@ -60,11 +126,6 @@ public class PlayerAttackingState : PlayerState
         
         // 核心改动：退出攻击状态时，恢复玩家的转向能力。
         playerController.CanFlip = true;
-        
-        // 重置动画参数（如果需要）
-        animator?.ResetTrigger("Attack"); // 重置攻击触发器
-        // 不再重置"Skill"触发器，因为我们现在只使用"UseSkill"触发器
-        animator?.SetBool("IsAttacking", false);
     }
     
     public override void LogicUpdate()
@@ -80,6 +141,7 @@ public class PlayerAttackingState : PlayerState
         // 在攻击动画期间，允许冲刺来取消攻击
         else if (playerController.SprintInput && playerController.CanSprint)
         {
+            playerController.UseSprintInput(); // <<-- 消耗冲刺输入
             stateMachine.ChangeState(stateMachine.SprintingState);
         }
     }
@@ -88,27 +150,49 @@ public class PlayerAttackingState : PlayerState
     {
         base.PhysicsUpdate();
         
-        // 攻击时可以有轻微的水平移动（如果需要）
-        Vector2 moveInput = playerController.GetMoveInput();
-        
-        // 如果配置允许攻击时移动，则应用移动
-        if (combatController != null && combatController.CanMoveWhileAttacking())
+        if (activeAttack == null) return;
+
+        // --- 核心改动：物理行为现在完全由Skill资产驱动 ---
+
+        // 1. 处理空中攻击
+        if (!playerController.IsGrounded)
         {
-            playerController.Move(moveInput.x, combatController.AttackMovementFactor);
+            // 如果技能配置为“空中停滞”
+            if (activeAttack.stallInAir)
+            {
+                // 设置一个固定的垂直速度（可以为负，实现缓慢下落）
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, activeAttack.airStallVerticalVelocity);
+
+                // 在空中停滞时，仍然允许轻微的水平控制，控制程度由技能定义
+                Vector2 moveInput = playerController.GetMoveInput();
+                playerController.Move(moveInput.x, playerController.AirControlFactor * activeAttack.airStallControlDampening);
+            }
+            // 如果技能没有配置为“空中停滞”，则不干预物理，实现自由移动的空中攻击
+        }
+        // 2. 处理地面攻击
+        else
+        {
+            // 这个全局开关可以保留，用于一些特殊情况，但主要控制权在haltMomentumOnGround
+            if (combatController != null && combatController.CanMoveWhileAttacking())
+            {
+                Vector2 moveInput = playerController.GetMoveInput();
+                playerController.Move(moveInput.x, combatController.AttackMovementFactor);
+            }
         }
     }
     
     private void DecideNextState()
     {
-        // 检查是否准备好下一个连击
-        if (combatController != null && combatController.isNextComboReady && playerController.AttackInput)
+        // 检查是否有新的攻击输入
+        if (playerController.AttackInput)
         {
-            // 重新进入攻击状态，执行下一个连击
+            playerController.UseAttackInput(); // <<-- 消耗攻击输入
+            // 重新进入攻击状态，执行新的攻击
             stateMachine.ChangeState(stateMachine.AttackingState);
             return;
         }
         
-        // 如果没有下一个连击，根据当前情况切换状态
+        // 如果没有新的攻击输入，根据当前情况切换状态
         if (!playerController.IsGrounded)
         {
             // 如果在空中，切换到下落状态

@@ -23,17 +23,12 @@ public class PlayerSprintingState : PlayerState
 
         playerController.PerformSprint(sprintDirection);
         playerController.StartSprintCooldown();
-        
-        animator?.SetTrigger("Sprint");
-        animator?.SetBool("IsSprinting", true);
     }
 
     public override void Exit()
     {
         base.Exit();
         playerController.EndSprint();
-        animator?.SetBool("IsSprinting", false);
-        animator?.ResetTrigger("Sprint");
     }
 
     public override void LogicUpdate()

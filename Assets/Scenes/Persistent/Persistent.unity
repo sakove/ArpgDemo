@@ -426,6 +426,7 @@ GameObject:
   - component: {fileID: 1309390856}
   - component: {fileID: 1309390857}
   - component: {fileID: 1309390860}
+  - component: {fileID: 1309390876}
   - component: {fileID: 1309390861}
   - component: {fileID: 1309390862}
   - component: {fileID: 1309390868}
@@ -503,16 +504,15 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!4 &1309390855
-Transform:
+--- !u!224 &1309390855
+RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1309390853}
-  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0216, y: 0.1294, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -520,6 +520,11 @@ Transform:
   - {fileID: 171488694}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -0.0216, y: 0.1294}
+  m_SizeDelta: {x: 1, y: 2}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!50 &1309390856
 Rigidbody2D:
   serializedVersion: 5
@@ -630,7 +635,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bd64220dfd88494fbfd4ad0489e63ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  basicAttack: {fileID: 11400000, guid: ac648e73b38f42347baa8a39e3e2c4fd, type: 2}
+  groundAttacks:
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
+  - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
+  upGroundAttacks:
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
+  - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
+  downGroundAttacks:
+  - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
+  airAttacks:
+  - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
+  upAirAttacks:
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
+  - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
+  downAirAttacks:
+  - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
   equippedSkills:
   - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
   - {fileID: 11400000, guid: 83e174f39549f6b40b3f5645677ab9fa, type: 2}
@@ -640,10 +661,15 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
   - {fileID: 11400000, guid: ed9aa1f8244e55449945c17ad56bbfda, type: 2}
   comboResetTime: 1.5
-  comboWindowTime: 0.5
   canMoveWhileAttacking: 0
-  attackMovementFactor: 0.3
-  isNextComboReady: 0
+  baseAnimatorController: {fileID: 9100000, guid: 832d96d95032844409ffe94e95c3b7f3, type: 2}
+  groundAttackStateName: Ground_Attack
+  upGroundAttackStateName: Up_Ground_Attack
+  downGroundAttackStateName: Down_Ground_Attack
+  airAttackStateName: Air_Attack
+  upAirAttackStateName: Up_Air_Attack
+  downAirAttackStateName: Down_Air_Attack
+  skillStateName: Skill
 --- !u!114 &1309390863
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -818,6 +844,8 @@ MonoBehaviour:
   sprintCooldown: 1
   maxHealth: 100
   invincibilityTime: 1
+  combatLayerIndex: 1
+  interactionLayerIndex: 2
 --- !u!114 &1309390869
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1021,6 +1049,20 @@ MonoBehaviour:
   _onValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1309390876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1309390853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc12bdfda00c37947b554894fe1c432c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 1309390861}
+  locomotionStateParameter: LocomotionState
 --- !u!1 &1406427570
 GameObject:
   m_ObjectHideFlags: 0

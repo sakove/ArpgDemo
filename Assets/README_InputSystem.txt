@@ -1,29 +1,28 @@
-# 输入系统更新说明
+# 输入系统设置指南
 
-我们已经将技能槽从3个扩展到7个，并修改了相关代码。为了使这些更改生效，您需要在Unity编辑器中重新生成InputSystem_Actions.cs文件。
+## 概述
 
-## 步骤
+本项目使用 Unity 的新输入系统 (New Input System)。所有的输入动作（如移动、跳跃、技能）都在 `Assets/InputSystem_Actions.inputactions` 这个资产文件中定义。
 
-1. 在Unity编辑器中，双击 `Assets/InputSystem_Actions.inputactions` 文件打开Input Action编辑器
-2. 在编辑器中，点击右上角的"Save Asset"按钮保存更改
-3. 在Inspector面板中，确保"Generate C# Class"选项已勾选
-4. 点击"Apply"按钮应用更改，这将重新生成InputSystem_Actions.cs文件
+系统会根据这个 `.inputactions` 文件自动生成一个对应的 C# 脚本 (`InputSystem_Actions.cs`)，代码通过这个脚本来响应输入。
 
-## 验证
+## **重要**: 何时以及如何更新输入脚本
 
-重新生成后，InputSystem_Actions.cs文件应该包含Skill4-Skill7的相关代码，包括：
+如果你修改了 `InputSystem_Actions.inputactions` 文件（例如，添加了一个新的动作，或者修改了一个按键绑定），你 **必须** 手动重新生成 C# 脚本才能让改动生效。
 
-- Player操作映射中的Skill4-Skill7动作
-- IPlayerActions接口中的OnSkill4-OnSkill7方法
-- PlayerActions结构体中的Skill4-Skill7属性和回调注册方法
+**重新生成 `InputSystem_Actions.cs` 的步骤：**
 
-## 按键绑定
+1.  在 Unity 编辑器中，找到并选中 `Assets/InputSystem_Actions.inputactions` 文件。
+2.  在 Inspector 窗口中，确认 "Generate C# Class" 选项是**勾选状态**。
+3.  点击 Inspector 窗口右下角的 **"Apply"** 按钮。
+4.  Unity 会自动更新 `InputSystem_Actions.cs` 文件。
 
-我们为新增的技能槽设置了以下默认按键：
+![Inspector aasets](https://i.imgur.com/gA9Iu6j.png)
 
-- 技能4: 键盘数字键 4
-- 技能5: 键盘数字键 5
-- 技能6: 键盘数字键 6
-- 技能7: 键盘数字键 7
+## 当前按键绑定参考
 
-您可以在Input Action编辑器中根据需要修改这些绑定。 
+-   **移动**: WASD / 左摇杆
+-   **跳跃**: 空格键 / Gamepad South
+-   **攻击**: 鼠标左键 / J 键 / Gamepad West
+-   **冲刺**: 左 Shift / K 键 / Gamepad East
+-   **技能 1-7**: 键盘数字键 1-7 
